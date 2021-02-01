@@ -8,7 +8,7 @@ git clone https://github.com/WuGomezCode/TextNow-API.git
 ```
 #### Method Two: ***Using pip***
 ```bash
-pip install TNAPI
+pip install PyTextNow
 ```
 *Note: If there is an unexplained error with the pip install, try adding the **--user** flag to it.*
 

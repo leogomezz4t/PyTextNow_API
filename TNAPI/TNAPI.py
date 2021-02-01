@@ -2,6 +2,7 @@ import mimetypes
 from TNAPI import login
 import requests
 from datetime import datetime
+import time
 import json
 
 class Client():
@@ -31,24 +32,30 @@ class Client():
         self.headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36'
         }
+
+        self.messages = self.get_messages()
     #Functions
     def get_messages(self):
         req = requests.get("https://www.textnow.com/api/users/" + self.username + "/messages", headers=self.headers, cookies=self.cookies)
         if str(req.status_code).startswith("2"):
             messages = json.loads(req.content)
-            messages = [msg for msg in messages["messages"] if msg['message_direction'] == 1]
-            return messages
+            return messages["messages"]
         else:
             raise self.FailedRequest(str(req.status_code))
 
     def get_sent_messages(self):
         sent_messages = self.get_messages()
-        sent_messages = [msg for msg in sent_messages["messages"] if msg['message_direction'] == 2]
+        sent_messages = [msg for msg in sent_messages if msg['message_direction'] == 2]
+        self.messages = self.get_messages()
         return sent_messages
 
     def get_new_messages(self):
+        self.messages = self.get_messages()
+        time.sleep(0.5 )
         new_messages = self.get_messages()
-        new_messages = [msg for msg in new_messages["messages"] if msg['message_direction'] == 1]
+        new_messages = [msg for msg in new_messages if msg['message_direction'] == 1]
+        print(new_messages[0] not in self.messages)
+        new_messages = [msg for msg in new_messages if msg not in self.messages]
 
         return new_messages
 
