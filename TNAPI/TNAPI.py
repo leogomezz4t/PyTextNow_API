@@ -1,5 +1,5 @@
 import mimetypes
-from TNAPI import login
+import login
 import requests
 from datetime import datetime
 import time
@@ -34,6 +34,7 @@ class Client():
         }
 
         self.messages = self.get_messages()
+        self.messages_read = [msg["id"] for msg in self.messages]
     #Functions
     def get_messages(self):
         req = requests.get("https://www.textnow.com/api/users/" + self.username + "/messages", headers=self.headers, cookies=self.cookies)
@@ -50,12 +51,12 @@ class Client():
         return sent_messages
 
     def get_new_messages(self):
-        self.messages = self.get_messages()
-        time.sleep(0.5 )
         new_messages = self.get_messages()
         new_messages = [msg for msg in new_messages if msg['message_direction'] == 1]
-        print(new_messages[0] not in self.messages)
-        new_messages = [msg for msg in new_messages if msg not in self.messages]
+        new_messages = [msg for msg in new_messages if msg["id"] not in self.messages_read]
+
+        for msg in new_messages:
+            self.messages_read.append(msg["id"])
 
         return new_messages
 

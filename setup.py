@@ -4,14 +4,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="TNAPI",
-    version="0.0.1",
+    name="PyTextNow",
+    version="0.0.7",
     author="Leo Wu-Gomez",
     author_email="leojwu18@gmail.com",
     description="Texting python package which utilizes TextNow.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/WuGomezCode/PyTextNow-API",
+    url="https://github.com/leogomezz4t/PyTextNow_API",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
