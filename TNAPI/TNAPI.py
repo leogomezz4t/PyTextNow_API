@@ -42,24 +42,15 @@ class Client():
             raise self.FailedRequest(str(req.status_code))
 
     def get_sent_messages(self):
-        req = requests.get("https://www.textnow.com/api/users/" + self.username + "/messages", headers=self.headers, cookies=self.cookies)
-        if str(req.status_code).startswith("2"):
-            sent_messages = json.loads(req.content)
-            sent_messages = [msg for msg in sent_messages["messages"] if msg['message_direction'] == 2]
-            return sent_messages
-        else:
-            raise self.FailedRequest(str(req.status_code))
+        sent_messages = self.get_messages()
+        sent_messages = [msg for msg in sent_messages["messages"] if msg['message_direction'] == 2]
+        return sent_messages
 
     def get_new_messages(self):
-        req = requests.get("https://www.textnow.com/api/users/" + self.username + "/messages", headers=self.headers, cookies=self.cookies)
-        if str(req.status_code).startswith('2'):
-            new_messages = json.loads(req.content)
-            new_messages = [msg for msg in new_messages["messages"] if msg['message_direction'] == 1]
-            new_messages = [msg for msg in new_messages if msg not in self.get_messages()]
+        new_messages = self.get_messages()
+        new_messages = [msg for msg in new_messages["messages"] if msg['message_direction'] == 1]
 
-            return new_messages
-        else:
-            raise self.FailedRequest(str(req.status_code))
+        return new_messages
 
     def send_mms(self, to, file):
         mime_type = mimetypes.guess_type(file)[0]
