@@ -11,7 +11,7 @@ setuptools.setup(
     description="Texting python package which utilizes TextNow.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/WuGomezCode/TextNow-API",
+    url="https://github.com/WuGomezCode/PyTextNow-API",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
