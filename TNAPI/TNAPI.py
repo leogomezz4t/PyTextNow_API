@@ -2,7 +2,6 @@ import mimetypes
 from TNAPI import login
 import requests
 from datetime import datetime
-import time
 import json
 
 class Client():
@@ -49,7 +48,8 @@ class Client():
     def get_sent_messages(self):
         sent_messages = self.get_messages()
         sent_messages = [msg for msg in sent_messages if msg['message_direction'] == 2]
-        self.messages = self.get_messages()
+        sent_messages = [self.__Message(msg) if not msg["message"].startswith("http") else self.__MultiMediaMessage(msg) for msg in sent_messages]
+
         return sent_messages
 
     def get_new_messages(self):
