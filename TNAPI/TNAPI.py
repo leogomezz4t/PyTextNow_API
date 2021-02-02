@@ -1,5 +1,5 @@
 import mimetypes
-import login
+from TNAPI import login
 import requests
 from datetime import datetime
 import time
@@ -27,7 +27,9 @@ class Client():
                 'connect.sid': sid
             }
             user_SIDS[self.email] = sid
+            user_SIDS_file.seek(0)
             user_SIDS_file.write(json.dumps(user_SIDS))
+            user_SIDS_file.truncate()
 
         self.headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36'
@@ -54,10 +56,9 @@ class Client():
         new_messages = self.get_messages()
         new_messages = [msg for msg in new_messages if msg['message_direction'] == 1]
         new_messages = [msg for msg in new_messages if msg["id"] not in self.messages_read]
-
         for msg in new_messages:
             self.messages_read.append(msg["id"])
-
+        new_messages = [self.__Message(msg) if not msg["message"].startswith("http") else self.__MultiMediaMessage(msg) for msg in new_messages]
         return new_messages
 
     def send_mms(self, to, file):
@@ -143,3 +144,29 @@ class Client():
         def __str__(self):
             message = f"Could not send message. {self.reason}\nStatus Code: {self.status_code}"
             return message
+    #Custom Classes
+    class Message():
+        def __init__(self, msg_obj):
+            self.content = msg_obj["message"]
+            self.number = msg_obj["contact_value"]
+            self.date = datetime.fromisoformat(msg_obj["date"].replace("Z", "+00:00"))
+            self.first_contact = msg_obj["conversation_filtering"]["first_time_contact"]
+            self.type = 0
+    
+    class MultiMediaMessage(Message):
+        def __init__(self, msg_obj):
+            super().__init__(msg_obj)
+            self.url = self.content
+            del self.content
+            file_req = requests.get(self.url)
+            self.raw_data = file_req.content
+            self.content_type = file_req.headers["Content-Type"]
+            self.extension = self.content_type.split("/")[1]
+            self.type = 1
+
+        def mv(self, file_path=None):
+            if not file_path:
+                file_path = f"./file.{self.extension}"
+            with open(file_path, mode="wb") as f:
+                f.write(self.raw_data)
+            
