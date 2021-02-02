@@ -89,15 +89,13 @@ sent_messages = client.get_sent_messages() -> List
 ### 9.0
 - Using Message and MultiMediaMessage classes instead of dictionary for /get_new_messages/get_sent_messages
 - get_messages still returns old dictionary
+- Fixed user_sids.json overwrite problem
 
 ### 0.8
 - Fixed the receiving messages. Now working 100%
 
 ### 0.7
 - Added FailedRequest and InvalidFileType errors to Client instance
-
-### 0.6
-- Fixed the user_sids.json overwrite bug
 
 ### 0.5
 - bug fixes
