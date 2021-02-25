@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 
 #Functions
-try:
+if webdriver == 'firefox':
     def login(user, password, path=r"geckodriver.exe"):
     opts = Options()
 
