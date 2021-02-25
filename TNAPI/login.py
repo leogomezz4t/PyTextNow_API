@@ -7,7 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
-
+webdriver = 'firefox' # use firefox by default, but can also be set to 'chrome'
 #Functions
 if webdriver == 'firefox':
     def login(user, password, path=r"geckodriver.exe"):
