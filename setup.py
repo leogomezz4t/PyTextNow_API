@@ -18,6 +18,9 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    install_requires=[
+          'selenium',
+    ],
     python_requires='>=3.6',
     include_package_data=True
 )
