@@ -34,7 +34,7 @@ try:
     sid = browser.get_cookie("connect.sid")["value"]
     browser.close()
     return sid
-else:
+elif webdriver == 'chrome':
     def login(user, password, path=r"chromedriver.exe"):
     opts = Options()
 
