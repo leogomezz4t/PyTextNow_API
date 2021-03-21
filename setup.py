@@ -20,5 +20,5 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
     include_package_data=True,
-    scripts=["bin/tnapi.py"]
+    scripts=["TNAPI/TNAPI.py"]
 )
