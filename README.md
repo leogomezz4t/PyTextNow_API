@@ -86,6 +86,9 @@ sent_messages = client.get_sent_messages() -> List
 
 ## Patch Notes 
 
+### 0.9.4
+- Bug fixes
+
 ### 0.9.3
 - Added constants such as
     - SENT_MESSAGE_TYPE
