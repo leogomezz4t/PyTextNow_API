@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="PyTextNow",
-    version="0.9.6",
+    version="0.9.8",
     author="Leo Wu-Gomez",
     author_email="leojwu18@gmail.com",
     description="Texting python package which utilizes TextNow.",

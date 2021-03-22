@@ -86,6 +86,12 @@ sent_messages = client.get_sent_messages() -> List
 
 ## Patch Notes 
 
+### 0.9.8
+- Bug Fixes
+
+## 0.9.7
+- Bug Fixes
+
 ### 0.9.6
 - Bug Fixes
 
