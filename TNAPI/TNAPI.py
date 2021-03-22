@@ -14,7 +14,7 @@ RECEIVED_MESSAGE_TYPE = 1
 class Client():
     def __init__(self, email: str, password: str, name: str = ""):
         #Load SIDS
-        user_SID_filepath = "\\".join(abspath(__file__).split("\\")[:-1]) + "\\user_sids.json"
+        user_SID_filepath = "\\".join(abspath(__file__).replacce("/", "\\").split("\\")[:-1]) + "\\user_sids.json"
         user_SIDS_file = open(user_SID_filepath, mode="r+")
         user_SIDS = json.loads(user_SIDS_file.read())
 
