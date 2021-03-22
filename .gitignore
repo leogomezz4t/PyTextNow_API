@@ -28,6 +28,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+test.*
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -796,6 +797,7 @@ $RECYCLE.BIN/
 *.msix
 *.msm
 *.msp
+*.bat
 
 # Windows shortcuts
 *.lnk
