@@ -86,6 +86,10 @@ sent_messages = client.get_sent_messages() -> List
 
 ## Patch Notes 
 
+### 0.9.5
+- Linux `__file__` not absolute.
+Used os.path.abspath
+
 ### 0.9.4
 - Bug fixes
 
