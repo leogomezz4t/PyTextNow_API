@@ -86,10 +86,27 @@ sent_messages = client.get_sent_messages() -> List
 
 ## Patch Notes 
 
+### 1.0.0
+- Complete overhaul of the way this module works.
+
+- `client.get_new_messages()` is now deprecated and no longer in use. Instead of that use the new method `client.get_unread_messages()` which will return all unread messages. It will return the same thing each time unless you mark the messages as read with `Message.mark_as_read()`
+
+- `Message` and `MultiMediaMessage` class have a new `mark_as_read()` method to mark the message as read. `mark_as_read()` will make a POST to the textnow.com server.
+
+-  `client.get_messages()` now returns a list of `Message` or `MultiMediaMessage` classes. For the old function which returned the raw dict use `client.get_raw_messages()`
+
+- `client.get_sent_messages()` is a new method that gets all messages you have sent
+
+- `client.get_received_messages()` is a new method that gets all messages you have received regardless of whether or not it has been read.
+
+- `client.get_read_messages()` is a new method that returns all messages that have been read by you.
+
+
+
 ### 0.9.8
 - Bug Fixes
 
-## 0.9.7
+### 0.9.7
 - Bug Fixes
 
 ### 0.9.6
