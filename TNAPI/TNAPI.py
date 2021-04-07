@@ -18,11 +18,20 @@ RECEIVED_MESSAGE_TYPE = 1
 SIP_ENDPOINT = "prod.tncp.textnow.com"
 
 class Client():
-    def __init__(self, email: str):
+    def __init__(self, email: str, cookie=None):
         #Load SIDS
         user_SID_filepath = "/".join(abspath(__file__).replace("\\", "/").split("/")[:-1]) + "/user_sids.json"
-        user_SIDS_file = open(user_SID_filepath, mode="r+")
-        user_SIDS = json.loads(user_SIDS_file.read())
+        try:
+            with open(user_SID_filepath, "r") as user_SIDS_file:
+                user_SIDS = json.loads(user_SIDS_file.read())
+        except json.decoder.JSONDecodeError:
+            with open(user_SID_filepath, "w") as user_SIDS_file:
+                user_SIDS_file.write("{}")
+            with open(user_SID_filepath, "r") as user_SIDS_file:
+                user_SIDS = json.loads(user_SIDS_file.read())
+        else:
+            with open(user_SID_filepath, "r") as user_SIDS_file:
+                user_SIDS = json.loads(user_SIDS_file.read())
 
         self.email = email
         self.username = email.split("@")[0]
@@ -33,22 +42,19 @@ class Client():
             'connect.sid': user_SIDS[self.email]
             }
         else:
-            sid = login()
+            sid = cookie if cookie else login()
             self.cookies = {
                 'connect.sid': sid
             }
             user_SIDS[self.email] = sid
-            user_SIDS_file.seek(0)
-            user_SIDS_file.write(json.dumps(user_SIDS))
-            user_SIDS_file.truncate()
+            with open(user_SID_filepath, "w") as user_SIDS_file:
+                user_SIDS_file.write(json.dumps(user_SIDS))
 
         self.headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36'
         }
         
         user_SIDS_file.close()
-
-        self.tasks = {}
 
     #Functions
     def auth_reset(self):
@@ -74,7 +80,7 @@ class Client():
         if str(req.status_code).startswith("2"):
             messages = json.loads(req.content)
             messages = [self.Message(msg, self) if not msg["message"].startswith("http") else self.MultiMediaMessage(msg, self) for msg in messages["messages"]]
-            return messages
+            return self.MessageContainer(messages, self)
         else:
             raise self.FailedRequest(str(req.status_code))
 
@@ -111,8 +117,7 @@ class Client():
         """
             Gets unread messages
         """
-        new_messages = self.get_messages()
-        new_messages = [msg for msg in new_messages if msg.direction == RECEIVED_MESSAGE_TYPE]
+        new_messages = self.get_received_messages()
         new_messages = [msg for msg in new_messages if not msg.read]
         
         return new_messages
@@ -121,8 +126,7 @@ class Client():
         """
             Gets read messages
         """
-        new_messages = self.get_messages()
-        new_messages = [msg for msg in new_messages if msg.direction == RECEIVED_MESSAGE_TYPE]
+        new_messages = self.get_received_messages()
         new_messages = [msg for msg in new_messages if msg.read]
         
         return new_messages
@@ -202,7 +206,7 @@ class Client():
             if status_code.startswith('3'):
                 self.reason = "server redirected the request. Request Failed."
             elif status_code.startswith('4'):
-                self.reason = "server returned a Client error. Request Failed."
+                self.reason = "server returned a Client error. Request Failed. Try resetting your authentication with client.auth_reset()"
             elif status_code.startswith('5'):
                 if status_code == "500":
                     self.reason = "Internal Server Error. Request Failed."
@@ -236,7 +240,6 @@ class Client():
 
         def __str__(self):
             class_name = self.__class__.__name__
-            print(class_name)
             s = f"<{class_name} number: {self.number}, content: {self.content}>"
             return s
         
@@ -326,3 +329,23 @@ class Client():
                 file_path = f"./file.{self.extension}"
             with open(file_path, mode="wb") as f:
                 f.write(self.raw_data)
+
+    class MessageContainer(list):
+        def __init__(self, msg_list: list, outer_self):
+            super().__init__(msg_list)
+            self.msg_list = msg_list
+            self.outer_self = outer_self
+        
+        def __str__(self):
+            ss = [msg.__str__() for msg in self.msg_list]
+            s = '[' + "\n".join(ss) + ']'
+            return s
+        
+        def get(self, **kwargs):
+            filtered_list = []
+            for msg in self.msg_list:
+                if all(key in msg.__dict__.keys() for key in kwargs):
+                    if all(getattr(msg, key) == val for key, val in msg.__dict__.items()):
+                        filtered_list.append(msg)
+            
+            return self.outer_self.MessageContainer(filtered_list, self.outer_self)

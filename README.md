@@ -20,38 +20,55 @@ pip install PyTextNow
 
 
 ## Usage
-### How to send an sms message
+
+### Ways to authenticate
 ```python
 import TNAPI
 
-client = TNAPI.Client("Email address", "Password", "Name") #The name is used for the message storing.
+# Way 1. Include connect.sid cookie in the constructor
+client = TNAPI.Client("Email address", cookie="sid").
 
-client.send_sms("18006969420", "Hello World!")
+# Way 2. Just instantiate and a prompt will appear on the command line
+
+# Way 3. If you inputed the wrong cookie and are getting RequestFailed. This is how to reset it
+client.auth_reset()
+# will redo the prompt
+```
+
+### How to send an sms message
+```python
+client.send_sms("number", "Hello World!")
 ```
 ### How to send an mms message
 ```python
 file_path = "./img.jpeg"
-client.send_mms("18006969420", file_path)
+client.send_mms("number", file_path)
 ```
 ### How to get new messages
 ```python
-new_messages = client.get_new_messages() -> List
+new_messages = client.get_unread_messages() -> MessageContainer list
 for message in new_messages:
+    message.mark_as_read()
     print(message)
     # Class Message | Class MultiMediaMessage
     # Message
     # content: "body of sms"
     # number: "number of sender"
     # date: datetime object of when the message was received
+    # read: bool
+    # id: int
+    # direction: SENT_MESSAGE_TYPE or RECEIVED_MESSAGE_TYPE
     # first_contact: bool if its the first time that number texted you
     # type: MESSAGE_TYPE if class is Message and MULTIMEDIAMESSAGE_TYPE if class is MultiMediaMessage
+
+    # Functions
+    # mark_as_read() will post the server as read
+    # send_sms() will send an sms to the number who sent the message
+    # send_mms() will send an mms to the number who sent the message
     
     # MultiMediaMessage
-    # number: "number of sender"
-    # date: datetime object of when the message was received
-    # first_contact: bool if its the first time that number texted you
-    # type: MESSAGE_TYPE if class is Message and MULTIMEDIAMESSAGE_TYPE if class is MultiMediaMessage
-    # url: "url of the media"
+    # All the attributes of Message
+    # content: url of media
     # raw_data: bytes of the media
     # content_type: str the MIME type ie. "image/jpeg" or "video/mp4"
     # extension: str of the file extension is. "jpeg" or "mp4"
@@ -69,13 +86,37 @@ for message in new_messages:
 ```
 ### How to get all messages
 ```python
-messages = client.get_messages() -> List
+messages = client.get_messages() -> MessageContainer list
 # Same as above
 ```
 ### How to get all sent messages
 ```python 
-sent_messages = client.get_sent_messages() -> List
+sent_messages = client.get_sent_messages() -> MessageContainer list
 #Same as above
+```
+
+### How to filter messages
+```python
+filtered = client.get_messages().get(number="number")
+```
+
+## Simple bot snippet
+```python
+import TNAPI as tn
+import time
+
+client = tn.Client("email", cookie="connect.sid")
+while 1:
+    unreads = client.get_unread_messages()
+    for msg in unreads:
+        msg.mark_as_read()
+        if msg.type == tn.MESSAGE_TYPE:
+            if msg.content == "ping":
+                msg.send_sms("pong")
+        else:
+            msg.mv("test" + msg.extension)
+    
+    time.sleep(0.2)
 ```
 
 ## Custom Module Exceptions
@@ -85,6 +126,12 @@ sent_messages = client.get_sent_messages() -> List
 
 
 ## Patch Notes 
+
+### 1.0.1
+- Fixed config json.JSONDecodeError
+- new Class `MessageContainer` that acts as a list with some added functions and `__str__()`
+- `MessageContainer` has method `get` which will return a `MessageContainer` that filtered through all messages
+- Fixed readme.md Usage section.
 
 ### 1.0.0
 - Complete overhaul of the way this module works.
