@@ -18,7 +18,7 @@ RECEIVED_MESSAGE_TYPE = 1
 SIP_ENDPOINT = "prod.tncp.textnow.com"
 
 class Client():
-    def __init__(self, email: str):
+    def __init__(self, email: str, cookie = None):
         #Load SIDS
         user_SID_filepath = "/".join(abspath(__file__).replace("\\", "/").split("/")[:-1]) + "/user_sids.json"
         user_SIDS_file = open(user_SID_filepath, mode="r+")
@@ -33,7 +33,7 @@ class Client():
             'connect.sid': user_SIDS[self.email]
             }
         else:
-            sid = login()
+            sid = cookie if cookie else login()
             self.cookies = {
                 'connect.sid': sid
             }
