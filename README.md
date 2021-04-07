@@ -140,6 +140,9 @@ while 1:
 
 ## Patch Notes 
 
+### 1.0.3
+- Bug fixes
+
 ### 1.0.2
 - `Client` has new function `client.wait_for_response(number, timeout=True)`. Documentation on how to use it above
 - `Message` has same function but the number argument is set to the number who sent the message. `client.Message.wait_for_response(timeout=True)`
