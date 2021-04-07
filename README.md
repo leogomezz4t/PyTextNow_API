@@ -24,7 +24,7 @@ pip install PyTextNow
 ```python
 import TNAPI
 
-client = TNAPI.Client("Email address", "Password", "Name") #The name is used for the message storing.
+client = TNAPI.Client("youremailhere@example.com") #The name is used for the message storing.
 
 client.send_sms("18006969420", "Hello World!")
 ```
