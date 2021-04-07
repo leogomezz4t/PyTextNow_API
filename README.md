@@ -100,6 +100,19 @@ sent_messages = client.get_sent_messages() -> MessageContainer list
 filtered = client.get_messages().get(number="number")
 ```
 
+### How to synchronously block until a response
+```python
+# This will wait for a response from someone and return the Message
+
+msg = client.wait_for_response("number")
+
+# This function will work with a message object too
+
+unreads = client.get_unread_messages()
+for unread in unreads:
+    msg = unread.wait_for_response()
+```
+
 ## Simple bot snippet
 ```python
 import TNAPI as tn
@@ -126,6 +139,10 @@ while 1:
 
 
 ## Patch Notes 
+
+### 1.0.2
+- `Client` has new function `client.wait_for_response(number, timeout=True)`. Documentation on how to use it above
+- `Message` has same function but the number argument is set to the number who sent the message. `client.Message.wait_for_response(timeout=True)`
 
 ### 1.0.1
 - Fixed config json.JSONDecodeError

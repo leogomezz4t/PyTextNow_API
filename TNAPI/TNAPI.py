@@ -4,10 +4,12 @@ if __name__ == "__main__":
 else:
     from TNAPI.login import login
 import requests
-from datetime import datetime
+from datetime import datetime, time
+from dateutil.relativedelta import relativedelta
 import json
 from os.path import abspath
 from urllib.parse import quote
+import time
 
 MESSAGE_TYPE = 0
 MULTIMEDIAMESSAGE_TYPE = 1
@@ -102,7 +104,7 @@ class Client():
         sent_messages = self.get_messages()
         sent_messages = [msg for msg in sent_messages if msg.direction == SENT_MESSAGE_TYPE]
 
-        return sent_messages
+        return self.MessageContainer(sent_messages, self)
 
     def get_received_messages(self):
         """
@@ -111,7 +113,7 @@ class Client():
         messages = self.get_messages()
         messages = [msg for msg in messages if msg.direction == RECEIVED_MESSAGE_TYPE]
 
-        return messages
+        return self.MessageContainer(messages, self)
 
     def get_unread_messages(self):
         """
@@ -120,7 +122,7 @@ class Client():
         new_messages = self.get_received_messages()
         new_messages = [msg for msg in new_messages if not msg.read]
         
-        return new_messages
+        return self.MessageContainer(new_messages, self)
 
     def get_read_messages(self):
         """
@@ -129,7 +131,7 @@ class Client():
         new_messages = self.get_received_messages()
         new_messages = [msg for msg in new_messages if msg.read]
         
-        return new_messages
+        return self.MessageContainer(new_messages, self)
 
     def send_mms(self, to, file):
         """
@@ -190,6 +192,28 @@ class Client():
         if not str(response.status_code).startswith("2"):
             raise self.FailedRequest(str(response.status_code))
         return response
+
+    def wait_for_response(self, number, timeout_bool=True):
+            for msg in self.get_unread_messages():
+                msg.mark_as_read()
+            timeout = datetime.now() + relativedelta(minute=10)
+            if not timeout_bool: 
+                while 1:
+                    unreads = self.get_unread_messages()
+                    filtered = unreads.get(number=number)
+                    if len(filtered) == 0: 
+                        time.sleep(0.2)
+                        continue
+                    return filtered[0]
+
+            else:     
+                while datetime.now() > timeout:
+                    unreads = self.get_unread_messages()
+                    filtered = unreads.get(number=number)
+                    if len(filtered) == 0: 
+                        time.sleep(0.2)
+                        continue
+                    return filtered[0]
 
     #Custom Errors
     """
@@ -314,6 +338,29 @@ class Client():
             res = requests.post(url, params=params, data=data,cookies=self.self.cookies, headers=self.self.headers)
             return res
 
+        def wait_for_response(self, timeout_bool=True):
+            self.mark_as_read()
+            for msg in self.get_unread_messages():
+                msg.mark_as_read()
+            timeout = datetime.now() + relativedelta(minute=10)
+            if not timeout_bool: 
+                while 1:
+                    unreads = self.self.get_unread_messages()
+                    filtered = unreads.get(number=self.number)
+                    if len(filtered) == 0: 
+                        time.sleep(0.2)
+                        continue
+                    return filtered[0]
+
+            else:     
+                while datetime.now() > timeout:
+                    unreads = self.self.get_unread_messages()
+                    filtered = unreads.get(number=self.number)
+                    if len(filtered) == 0: 
+                        time.sleep(0.2)
+                        continue
+                    return filtered[0]
+
     class MultiMediaMessage(Message):
         def __init__(self, msg_obj, outer_self):
             super().__init__(msg_obj, outer_self)
@@ -349,3 +396,8 @@ class Client():
                         filtered_list.append(msg)
             
             return self.outer_self.MessageContainer(filtered_list, self.outer_self)
+
+client = Client("leojwu18@gmail.com")
+
+msg = client.wait_for_response("17808189732")
+print(msg)
