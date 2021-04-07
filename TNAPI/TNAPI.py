@@ -22,7 +22,9 @@ class Client():
         #Load SIDS
         user_SID_filepath = "/".join(abspath(__file__).replace("\\", "/").split("/")[:-1]) + "/user_sids.json"
         user_SIDS_file = open(user_SID_filepath, mode="r+")
-        user_SIDS = json.loads(user_SIDS_file.read())
+        
+        user_sids_file_data = user_SIDS_file.read()
+        user_SIDS = json.loads(user_sids_file_data) if user_sids_file_data else {}
 
         self.email = email
         self.username = email.split("@")[0]
