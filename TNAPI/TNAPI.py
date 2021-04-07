@@ -396,8 +396,3 @@ class Client():
                         filtered_list.append(msg)
             
             return self.outer_self.MessageContainer(filtered_list, self.outer_self)
-
-client = Client("leojwu18@gmail.com")
-
-msg = client.wait_for_response("17808189732")
-print(msg)
