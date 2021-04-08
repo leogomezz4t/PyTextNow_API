@@ -23,7 +23,7 @@ pip install PyTextNow
 
 ### Ways to authenticate
 ```python
-import TNAPI
+import pytextnow
 
 # Way 1. Include connect.sid cookie in the constructor
 client = TNAPI.Client("Email address", cookie="sid").
@@ -115,7 +115,7 @@ for unread in unreads:
 
 ## Simple bot snippet
 ```python
-import TNAPI as tn
+import pytextnow as tn
 import time
 
 client = tn.Client("email", cookie="connect.sid")
@@ -137,8 +137,23 @@ while 1:
 ### FailedRequest:
 #### This API runs on web requests and if the request fails this Exception will be raised
 
+### AuthError:
+#### During an auth reset if a cookie is not passed and there is no stored cookie in the file it will raise this error.
+
 
 ## Patch Notes 
+
+## 1.1.0
+- bug fixes
+- if a cookie argument is passed to `Client` it will overide the stored cookie.
+- cookie argument can now be passed to `client.auth_reset()`
+- Changed import name from `TNAPI` to `pytextnow`
+```python
+#Pre 1.1.0
+import pytextnow as tn
+# Now
+import pytextnow as tn
+```
 
 ### 1.0.3
 - Bug fixes
@@ -153,7 +168,7 @@ while 1:
 - `MessageContainer` has method `get` which will return a `MessageContainer` that filtered through all messages
 - Fixed readme.md Usage section.
 
-### 1.0.0
+## 1.0.0
 - Complete overhaul of the way this module works.
 
 - `client.get_new_messages()` is now deprecated and no longer in use. Instead of that use the new method `client.get_unread_messages()` which will return all unread messages. It will return the same thing each time unless you mark the messages as read with `Message.mark_as_read()`
@@ -200,31 +215,31 @@ Used os.path.abspath
 ### 0.9.1
 - Nothing much
 
-### 0.9.0
+## 0.9.0
 - Using Message and MultiMediaMessage classes instead of dictionary for /get_new_messages/get_sent_messages
 - get_messages still returns old dictionary
 - Fixed user_sids.json overwrite problem
 
-### 0.8.0
+## 0.8.0
 - Fixed the receiving messages. Now working 100%
 
-### 0.7.0
+## 0.7.0
 - Added FailedRequest and InvalidFileType errors to Client instance
 
-### 0.5.0
+## 0.5.0
 - bug fixes
 
-### 0.4.0
+## 0.4.0
 - Added `Client = TNAPI.Client` in \_\_init\_\_.py
 - Fixed the failed login import in TNAPI.py
 
-### 0.3.0
+## 0.3.0
 - Receiving messages are better but not good
 
-### 0.2.0
+## 0.2.0
 - Nothing much
 
-### 0.1.0
+## 0.1.0
 - Initial Commit
 - Can send messages and photos/videos
 - receiving messages a work in progress
