@@ -143,6 +143,9 @@ while 1:
 
 ## Patch Notes 
 
+### 1.1.1
+- Import Bug Fixes
+
 ## 1.1.0
 - bug fixes
 - if a cookie argument is passed to `Client` it will overide the stored cookie.
