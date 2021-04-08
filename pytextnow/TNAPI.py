@@ -2,7 +2,7 @@ import mimetypes
 if __name__ == "__main__":
     from login import login
 else:
-    from TNAPI.login import login
+    from pytextnow.login import login
 import requests
 from datetime import datetime, time
 from dateutil.relativedelta import relativedelta
@@ -202,12 +202,12 @@ class Client():
         return response
 
     def wait_for_response(self, number, timeout_bool=True):
-            for msg in self.get_unread_messages():
+            for msg in self.self.get_unread_messages():
                 msg.mark_as_read()
             timeout = datetime.now() + relativedelta(minute=10)
             if not timeout_bool: 
                 while 1:
-                    unreads = self.get_unread_messages()
+                    unreads = self.self.get_unread_messages()
                     filtered = unreads.get(number=number)
                     if len(filtered) == 0: 
                         time.sleep(0.2)
@@ -216,7 +216,7 @@ class Client():
 
             else:     
                 while datetime.now() > timeout:
-                    unreads = self.get_unread_messages()
+                    unreads = self.self.get_unread_messages()
                     filtered = unreads.get(number=number)
                     if len(filtered) == 0: 
                         time.sleep(0.2)
@@ -348,7 +348,7 @@ class Client():
 
         def wait_for_response(self, timeout_bool=True):
             self.mark_as_read()
-            for msg in self.get_unread_messages():
+            for msg in self.self.get_unread_messages():
                 msg.mark_as_read()
             timeout = datetime.now() + relativedelta(minute=10)
             if not timeout_bool: 

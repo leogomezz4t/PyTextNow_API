@@ -141,7 +141,16 @@ while 1:
 #### During an auth reset if a cookie is not passed and there is no stored cookie in the file it will raise this error.
 
 
-## Patch Notes 
+## Patch Notes
+
+### 1.1.4
+- bug fixes
+
+### 1.1.3
+- bug fixes
+
+### 1.1.2
+- bug fixes
 
 ### 1.1.1
 - Import Bug Fixes
