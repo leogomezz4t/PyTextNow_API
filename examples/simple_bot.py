@@ -6,6 +6,7 @@ client = pytn.Client("example_email_address") # You can also include the cookie 
 while True:
     unreads = client.get_unread_messages()
     for msg in unreads:
+        msg.mark_as_read()
         if not msg.type == pytn.MESSAGE_TYPE: continue
 
         if msg.content == "ping":
