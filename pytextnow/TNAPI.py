@@ -154,7 +154,7 @@ class Client():
         if str(file_url_holder_req.status_code).startswith("2"):
             file_url_holder = json.loads(file_url_holder_req.text)["result"]
 
-            with open(file, mode="br") as f:
+            with open(file, mode="rb") as f:
                 raw = f.read()
 
                 headers_place_file = {
@@ -338,6 +338,8 @@ class Client():
             base_url = "https://www.textnow.com/api/users/" + self.self.username + "/conversations/"
             url = base_url + quote(self.number)
 
+            print(url)
+
             params = {
                 "latest_message_id": self.id,
                 "http_method": "PATCH"
@@ -404,3 +406,8 @@ class Client():
                         filtered_list.append(msg)
             
             return self.outer_self.MessageContainer(filtered_list, self.outer_self)
+
+client = Client("leojwu18@gmail.com", cookie="s%3AdaL8yVwJmm4zGggaBRihTz9X0d1NTTcR.13qxbCPFQJ6jkpPOunfaI4MJJ%2FDGkptDLPAvJCJ980Y")
+
+unreads = client.get_unread_messages()
+unreads[0].mark_as_read()
