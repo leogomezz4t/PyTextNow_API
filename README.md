@@ -21,6 +21,9 @@ pip install PyTextNow
 
 ## Usage
 
+### How to get the cookie
+[How to get the cookie](get_cookie.mp4)
+
 ### Ways to authenticate
 ```python
 import pytextnow
@@ -113,17 +116,33 @@ for unread in unreads:
     msg = unread.wait_for_response()
 ```
 
-## Simple bot snippet
+## NEW Simple bot snippet
 ```python
-import pytextnow as tn
+import pytextnow as pytn
+
+client = pytn.Client("email", cookie="connect.sid")
+
+@client.on("message")
+def handler(msg):
+    print(msg)
+    if msg.type == pytn.MESSAGE_TYPE:
+        if msg.content == "ping":
+            msg.send_sms("pong")
+        else:
+            msg.mv("test" + msg.extension)
+``` 
+
+## Simple bot snippet | OUTDATED AND DEPRECATED
+```python
+import pytextnow as pytn
 import time
 
-client = tn.Client("email", cookie="connect.sid")
+client = pytn.Client("email", cookie="connect.sid")
 while 1:
     unreads = client.get_unread_messages()
     for msg in unreads:
         msg.mark_as_read()
-        if msg.type == tn.MESSAGE_TYPE:
+        if msg.type == pytn.MESSAGE_TYPE:
             if msg.content == "ping":
                 msg.send_sms("pong")
         else:
@@ -142,6 +161,14 @@ while 1:
 
 
 ## Patch Notes
+
+### 1.1.5
+- New better way of getting new messages with Client.on method
+- Client.on works like an event handler that takes a decorator function and calls it with the parameter of one Message object
+- Bug Fixes
+- Added examples
+- Get cookie.mp4 video
+- Smarter cookie detection
 
 ### 1.1.4
 - bug fixes
@@ -162,9 +189,9 @@ while 1:
 - Changed import name from `TNAPI` to `pytextnow`
 ```python
 #Pre 1.1.0
-import pytextnow as tn
+import TNAPI as tn
 # Now
-import pytextnow as tn
+import pytextnow as pytn
 ```
 
 ### 1.0.3

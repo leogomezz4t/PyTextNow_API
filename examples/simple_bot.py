@@ -3,11 +3,9 @@ import pytextnow as pytn
 client = pytn.Client("example_email_address") # You can also include the cookie in ther Client constructor
 # Here you should input your connect.sid cookie
 
-while True:
-    unreads = client.get_unread_messages()
-    for msg in unreads:
-        msg.mark_as_read()
-        if not msg.type == pytn.MESSAGE_TYPE: continue
+@client.on("message")
+def on_message(msg):
+    if not msg.type == pytn.MESSAGE_TYPE: return
 
-        if msg.content == "ping":
-            msg.send_sms("pong")
+    if msg.content == "ping":
+        msg.send_sms("pong")

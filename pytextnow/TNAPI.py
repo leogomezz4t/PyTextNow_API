@@ -10,6 +10,7 @@ import json
 from os.path import abspath
 from urllib.parse import quote
 import time
+import atexit
 
 MESSAGE_TYPE = 0
 MULTIMEDIAMESSAGE_TYPE = 1
@@ -38,6 +39,9 @@ class Client():
         self.email = email
         self.username = email.split("@")[0]
         self.name = self.username
+        self.allowed_events = ["message"]
+
+        self.events = []
 
         if self.email in user_SIDS.keys():
             sid = cookie if cookie else user_SIDS[self.email]
@@ -58,6 +62,18 @@ class Client():
         }
         
         user_SIDS_file.close()
+
+        def on_exit():
+            if len(self.events) == 0: return
+            while 1:
+                for event, func in self.events:
+                    if event == "message":
+                        unreads = self.get_unread_messages()
+                        for msg in unreads:
+                            msg.mark_as_read()
+                            func(msg)
+                
+        atexit.register(on_exit)
 
     #Functions
     def auth_reset(self, cookie=None):
@@ -92,7 +108,7 @@ class Client():
             messages = [self.Message(msg, self) if not msg["message"].startswith("http") else self.MultiMediaMessage(msg, self) for msg in messages["messages"]]
             return self.MessageContainer(messages, self)
         else:
-            raise self.FailedRequest(str(req.status_code))
+            raise self.FailedRequestHandler(req.status_code)
 
     def get_raw_messages(self):
         """
@@ -103,7 +119,7 @@ class Client():
             messages = json.loads(req.content)
             return messages["messages"]
         else:
-            raise self.FailedRequest(str(req.status_code))
+            raise self.FailedRequestHandler(req.status_code)
 
     def get_sent_messages(self):
         """
@@ -184,9 +200,9 @@ class Client():
                     send_file_req = requests.post("https://www.textnow.com/api/v3/send_attachment", data=json_data, headers=self.headers, cookies=self.cookies)
                     return send_file_req
                 else:
-                    raise self.FailedRequest(str(place_file_req.status_code))
+                    raise self.FailedRequestHandler(place_file_req.status_code)
         else:
-            raise self.FailedRequest(str(file_url_holder_req.status_code))
+            raise self.FailedRequestHandler(file_url_holder_req.status_code)
     
     def send_sms(self, to, text):
         """
@@ -198,7 +214,7 @@ class Client():
 
         response = requests.post('https://www.textnow.com/api/users/' + self.username + '/messages', headers=self.headers, cookies=self.cookies, data=data)
         if not str(response.status_code).startswith("2"):
-            raise self.FailedRequest(str(response.status_code))
+            raise self.FailedRequestHandler(response.status_code)
         return response
 
     def wait_for_response(self, number, timeout_bool=True):
@@ -222,6 +238,12 @@ class Client():
                         time.sleep(0.2)
                         continue
                     return filtered[0]
+
+    def on(self, event: str):
+        if not event in self.allowed_events: raise self.InvalidEvent(event)
+        def deco(func):
+            self.events.append([event, func])
+        return deco
 
     #Custom Errors
     """
@@ -255,6 +277,20 @@ class Client():
         
         def __str__(self):
             return self.reason
+
+    class InvalidEvent(Exception):
+        def __init__(self, event):
+            self.event = event
+        def __str__(self):
+            return f"{self.event} is an invalid event."
+    
+    def FailedRequestHandler(self, req_code):
+        req_code = str(req_code)
+        if req_code == "401":
+            self.auth_reset()
+            return
+        
+        raise self.FailedRequest(req_code)
 
     #Custom Classes
     class Message():
@@ -326,7 +362,7 @@ class Client():
 
             response = requests.post('https://www.textnow.com/api/users/' + self.self.username + '/messages', headers=self.self.headers, cookies=self.self.cookies, data=data)
             if not str(response.status_code).startswith("2"):
-                raise self.FailedRequest(str(response.status_code))
+                raise self.FailedRequestHandler(response.status_code)
             return response
 
         def mark_as_read(self):
@@ -337,8 +373,6 @@ class Client():
 
             base_url = "https://www.textnow.com/api/users/" + self.self.username + "/conversations/"
             url = base_url + quote(self.number)
-
-            print(url)
 
             params = {
                 "latest_message_id": self.id,
@@ -407,7 +441,3 @@ class Client():
             
             return self.outer_self.MessageContainer(filtered_list, self.outer_self)
 
-client = Client("leojwu18@gmail.com", cookie="s%3AdaL8yVwJmm4zGggaBRihTz9X0d1NTTcR.13qxbCPFQJ6jkpPOunfaI4MJJ%2FDGkptDLPAvJCJ980Y")
-
-unreads = client.get_unread_messages()
-unreads[0].mark_as_read()
