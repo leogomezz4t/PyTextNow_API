@@ -108,7 +108,7 @@ class Client():
             messages = [self.Message(msg, self) if not msg["message"].startswith("http") else self.MultiMediaMessage(msg, self) for msg in messages["messages"]]
             return self.MessageContainer(messages, self)
         else:
-            raise self.FailedRequestHandler(req.status_code)
+            self.FailedRequestHandler(req.status_code)
 
     def get_raw_messages(self):
         """
@@ -119,7 +119,7 @@ class Client():
             messages = json.loads(req.content)
             return messages["messages"]
         else:
-            raise self.FailedRequestHandler(req.status_code)
+            self.FailedRequestHandler(req.status_code)
 
     def get_sent_messages(self):
         """
@@ -198,11 +198,12 @@ class Client():
                     }
 
                     send_file_req = requests.post("https://www.textnow.com/api/v3/send_attachment", data=json_data, headers=self.headers, cookies=self.cookies)
+                    print(send_file_req.request)
                     return send_file_req
                 else:
-                    raise self.FailedRequestHandler(place_file_req.status_code)
+                    self.FailedRequestHandler(place_file_req.status_code)
         else:
-            raise self.FailedRequestHandler(file_url_holder_req.status_code)
+            self.FailedRequestHandler(file_url_holder_req.status_code)
     
     def send_sms(self, to, text):
         """
@@ -214,7 +215,7 @@ class Client():
 
         response = requests.post('https://www.textnow.com/api/users/' + self.username + '/messages', headers=self.headers, cookies=self.cookies, data=data)
         if not str(response.status_code).startswith("2"):
-            raise self.FailedRequestHandler(response.status_code)
+            self.FailedRequestHandler(response.status_code)
         return response
 
     def wait_for_response(self, number, timeout_bool=True):
@@ -287,6 +288,9 @@ class Client():
     def FailedRequestHandler(self, req_code):
         req_code = str(req_code)
         if req_code == "401":
+            exc = self.FailedRequest(req_code)
+            print(exc)
+
             self.auth_reset()
             return
         
@@ -362,7 +366,7 @@ class Client():
 
             response = requests.post('https://www.textnow.com/api/users/' + self.self.username + '/messages', headers=self.self.headers, cookies=self.self.cookies, data=data)
             if not str(response.status_code).startswith("2"):
-                raise self.FailedRequestHandler(response.status_code)
+                self.FailedRequestHandler(response.status_code)
             return response
 
         def mark_as_read(self):
