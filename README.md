@@ -24,12 +24,15 @@ pip install PyTextNow
 ### How to get the cookie
 [How to get the cookie](get_cookie.mp4)
 
+### How to get your username
+[How to get TextNow username](get_username.mp4)
+
 ### Ways to authenticate
 ```python
 import pytextnow
 
 # Way 1. Include connect.sid cookie in the constructor
-client = TNAPI.Client("Email address", cookie="sid").
+client = pytextnow.Client("username", cookie="sid").
 
 # Way 2. Just instantiate and a prompt will appear on the command line
 
@@ -120,7 +123,7 @@ for unread in unreads:
 ```python
 import pytextnow as pytn
 
-client = pytn.Client("email", cookie="connect.sid")
+client = pytn.Client("username", cookie="connect.sid")
 
 @client.on("message")
 def handler(msg):
@@ -137,7 +140,7 @@ def handler(msg):
 import pytextnow as pytn
 import time
 
-client = pytn.Client("email", cookie="connect.sid")
+client = pytn.Client("username", cookie="connect.sid")
 while 1:
     unreads = client.get_unread_messages()
     for msg in unreads:
@@ -161,6 +164,14 @@ while 1:
 
 
 ## Patch Notes
+
+### 1.1.7
+- Added get_username.mp4 video
+- Changed Client system from email to username. You now input your textnow username instead of email.
+- Bug fixes
+
+### 1.1.6
+- Bug Fixes
 
 ### 1.1.5
 - New better way of getting new messages with Client.on method

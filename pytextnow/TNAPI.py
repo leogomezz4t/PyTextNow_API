@@ -21,7 +21,7 @@ RECEIVED_MESSAGE_TYPE = 1
 SIP_ENDPOINT = "prod.tncp.textnow.com"
 
 class Client():
-    def __init__(self, email: str, cookie=None):
+    def __init__(self, username: str = None, cookie=None):
         #Load SIDS
         user_SID_filepath = "/".join(abspath(__file__).replace("\\", "/").split("/")[:-1]) + "/user_sids.json"
         try:
@@ -36,24 +36,26 @@ class Client():
             with open(user_SID_filepath, "r") as user_SIDS_file:
                 user_SIDS = json.loads(user_SIDS_file.read())
 
-        self.email = email
-        self.username = email.split("@")[0]
-        self.name = self.username
+        self.username = username
         self.allowed_events = ["message"]
 
         self.events = []
 
-        if self.email in user_SIDS.keys():
-            sid = cookie if cookie else user_SIDS[self.email]
+        if self.username in user_SIDS.keys():
+            sid = cookie if cookie else user_SIDS[self.username]
             self.cookies = {
             'connect.sid': sid
             }
+            user_SIDS[self.username] = sid
+            if cookie:
+                with open(user_SID_filepath, "w") as user_SIDS_file:
+                    user_SIDS_file.write(json.dumps(user_SIDS))
         else:
             sid = cookie if cookie else login()
             self.cookies = {
                 'connect.sid': sid
             }
-            user_SIDS[self.email] = sid
+            user_SIDS[self.username] = sid
             with open(user_SID_filepath, "w") as user_SIDS_file:
                 user_SIDS_file.write(json.dumps(user_SIDS))
 
@@ -81,20 +83,20 @@ class Client():
         with open(user_SID_filepath, "r") as user_SIDS_file:
             user_SIDS = json.loads(user_SIDS_file.read()) 
 
-        if self.email in user_SIDS.keys():
-            del user_SIDS[self.email]  
+        if self.username in user_SIDS.keys():
+            del user_SIDS[self.username]  
 
             with open(user_SID_filepath, "w") as user_SIDS_file:
                 user_SIDS_file.write(json.dumps(user_SIDS))
 
 
-            self.__init__(self.email, cookie)
+            self.__init__(self.username, cookie)
         else:
             if cookie:
-                user_SIDS[self.email] = cookie
+                user_SIDS[self.username] = cookie
                 with open(user_SID_filepath, "w") as user_SIDS_file:
                     user_SIDS_file.write(json.dumps(user_SIDS))
-                self.__init__(self.email)
+                self.__init__(self.username)
             else:
                 raise self.AuthError("You haven't authenticated before.")
 
@@ -189,7 +191,7 @@ class Client():
                         "contact_value": to,
                         "contact_type":2,"read":1,
                         "message_direction":2,"message_type": msg_type,
-                        "from_name": self.name,
+                        "from_name": self.username,
                         "has_video":has_video,
                         "new":True,
                         "date": datetime.now().isoformat(),
@@ -210,9 +212,8 @@ class Client():
             Sends an sms text message to this number
         """
         data = {
-        'json': '{"contact_value":"' + to + '","contact_type":2,"message":"' + text + '","read":1,"message_direction":2,"message_type":1,"from_name":"' + self.name + '","has_video":false,"new":true,"date":"' + datetime.now().isoformat() + '"}'
+        'json': '{"contact_value":"' + to + '","contact_type":2,"message":"' + text + '","read":1,"message_direction":2,"message_type":1,"from_name":"' + self.username + '","has_video":false,"new":true,"date":"' + datetime.now().isoformat() + '"}'
         }
-
         response = requests.post('https://www.textnow.com/api/users/' + self.username + '/messages', headers=self.headers, cookies=self.cookies, data=data)
         if not str(response.status_code).startswith("2"):
             self.FailedRequestHandler(response.status_code)
@@ -344,7 +345,7 @@ class Client():
                             "contact_value": self.number,
                             "contact_type":2,"read":1,
                             "message_direction":2,"message_type": msg_type,
-                            "from_name": self.self.name,
+                            "from_name": self.self.username,
                             "has_video":has_video,
                             "new":True,
                             "date": datetime.now().isoformat(),
@@ -361,7 +362,7 @@ class Client():
         
         def send_sms(self, text):
             data = {
-                'json': '{"contact_value":"' + self.number + '","contact_type":2,"message":"' + text + '","read":1,"message_direction":2,"message_type":1,"from_name":"' + self.self.name + '","has_video":false,"new":true,"date":"' + datetime.now().isoformat() + '"}'
+                'json': '{"contact_value":"' + self.number + '","contact_type":2,"message":"' + text + '","read":1,"message_direction":2,"message_type":1,"from_name":"' + self.self.username + '","has_video":false,"new":true,"date":"' + datetime.now().isoformat() + '"}'
             }
 
             response = requests.post('https://www.textnow.com/api/users/' + self.self.username + '/messages', headers=self.self.headers, cookies=self.self.cookies, data=data)
