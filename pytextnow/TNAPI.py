@@ -1,5 +1,3 @@
-import os.path
-
 if __name__ == "__main__":
     from login import login
 else:
@@ -14,7 +12,7 @@ from datetime import datetime, time
 from dateutil.relativedelta import relativedelta
 
 import json
-from os.path import abspath, realpath, dirname, join
+from os.path import realpath, dirname, join
 import time
 import atexit
 
@@ -47,19 +45,13 @@ class Client:
 
         self.events = []
 
-        print(self.user_sid.keys())
-        print(f'sid: {self.user_sid.get(self.username)}')
-
         if self.username in self.user_sid.keys():
-            print('inside of keys')
             sid = cookie if cookie is not None else self.user_sid[self.username]
-            print(sid)
             self.cookies = {
                 'connect.sid': sid
             }
             self.user_sid[self.username] = sid
             if cookie and not self._good_parse:
-                print('we are writing to file with if')
                 with open(self._user_sid_file, "w") as file:
                     file.write(json.dumps(self.user_sid))
         else:
@@ -68,7 +60,6 @@ class Client:
                 'connect.sid': sid
             }
             self.user_sid[self.username] = sid
-            print('writing to file with else')
             with open(self._user_sid_file, "w") as file:
                 file.write(json.dumps(self.user_sid))
 
@@ -243,7 +234,6 @@ class Client:
         response = requests.post('https://www.textnow.com/api/users/' + self.username + '/messages',
                                  headers=self.headers, cookies=self.cookies, data=data)
         if not str(response.status_code).startswith("2"):
-            print('send msg no good')
             self.request_handler(response.status_code)
         return response
 
