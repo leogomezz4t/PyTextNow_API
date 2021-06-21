@@ -1,7 +1,21 @@
 import setuptools
+import os
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
+
+
+def dependencies():
+    project_path = os.path.dirname(os.path.realpath(__file__))
+    requirement_path = os.path.join(project_path, 'requirements.txt')
+    install_requires = []
+
+    if os.path.isfile(requirement_path):
+        with open(requirement_path) as f:
+            install_requires = f.read().splitlines()
+
+    return install_requires
+
 
 setuptools.setup(
     name="PyTextNow",
@@ -20,5 +34,5 @@ setuptools.setup(
     ],
     python_requires='>=3.6',
     include_package_data=True,
-    install_requires=["requests > 2"],
+    install_requires=dependencies(),
 )
