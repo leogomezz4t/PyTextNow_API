@@ -28,13 +28,13 @@ SIP_ENDPOINT = "prod.tncp.textnow.com"
 class Client:
     def __init__(self, username: str = None, cookie=None):
         # Load SIDS
-        self.user_sid = {}
+        self._user_sid = {}
         self._good_parse = False
         self._user_sid_file = join(dirname(realpath(__file__)), 'user_sids.json')
 
         try:
             with open(self._user_sid_file, 'r') as file:
-                self.user_sid = json.loads(file.read())
+                self._user_sid = json.loads(file.read())
                 self._good_parse = True
         except json.decoder.JSONDecodeError:
             with open(self._user_sid_file, 'w') as file:
@@ -45,23 +45,23 @@ class Client:
 
         self.events = []
 
-        if self.username in self.user_sid.keys():
-            sid = cookie if cookie is not None else self.user_sid[self.username]
+        if self.username in self._user_sid.keys():
+            sid = cookie if cookie else self._user_sid[self.username]
             self.cookies = {
                 'connect.sid': sid
             }
-            self.user_sid[self.username] = sid
+            self._user_sid[self.username] = sid
             if cookie and not self._good_parse:
                 with open(self._user_sid_file, "w") as file:
-                    file.write(json.dumps(self.user_sid))
+                    file.write(json.dumps(self._user_sid))
         else:
             sid = cookie if cookie else login()
             self.cookies = {
                 'connect.sid': sid
             }
-            self.user_sid[self.username] = sid
+            self._user_sid[self.username] = sid
             with open(self._user_sid_file, "w") as file:
-                file.write(json.dumps(self.user_sid))
+                file.write(json.dumps(self._user_sid))
 
         self.headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
