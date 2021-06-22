@@ -70,21 +70,21 @@ class Client:
 
         file.close()
 
-        def on_exit():
-            if len(self.events) == 0:
-                return
-
-            while 1:
-                for event, func in self.events:
-                    if event == "message":
-                        unread_msgs = self.get_unread_messages()
-                        for msg in unread_msgs:
-                            msg.mark_as_read()
-                            func(msg)
-
-        atexit.register(on_exit)
+        atexit.register(self.on_exit)
 
     # Functions
+    def on_exit(self):
+        if len(self.events) == 0:
+            return
+
+        while 1:
+            for event, func in self.events:
+                if event == "message":
+                    unread_msgs = self.get_unread_messages()
+                    for msg in unread_msgs:
+                        msg.mark_as_read()
+                        func(msg)
+
     def auth_reset(self, cookie=None):
         with open(self._user_sid_file, "r") as user_SIDS_file:
             user_SIDS = json.loads(user_SIDS_file.read())
