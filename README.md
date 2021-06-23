@@ -9,7 +9,7 @@
 ## Installation
 #### Method One: ***Using git clone***
 ```bash
-git clone https://github.com/WuGomezCode/TextNow-API.git
+git clone https://github.com/leogomezz4t/PyTextNow_API
 ```
 #### Method Two: ***Using pip***
 ```bash
@@ -164,6 +164,13 @@ while 1:
 
 
 ## Patch Notes
+
+### 1.1.8
+- Refactoring files/cleaning up
+- Making user sid private.
+- Refreshing allowing a user to keep their sid available for a longer period of time.
+- Added `Contact` and `ContactContainer` class
+- can use `get_contacts()` from the `Client` instance
 
 ### 1.1.7
 - Added get_username.mp4 video

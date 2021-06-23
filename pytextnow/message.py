@@ -11,7 +11,7 @@ MESSAGE_TYPE = 0
 
 
 class Message:
-    def __init__(self, msg_obj, outer_self):
+    def __init__(self, msg_obj, client):
         self.content = msg_obj["message"]
         self.number = msg_obj["contact_value"]
         self.date = datetime.fromisoformat(msg_obj["date"].replace("Z", "+00:00"))
@@ -21,7 +21,7 @@ class Message:
         self.id = msg_obj["id"]
         self.direction = msg_obj["message_direction"]
         self.raw = msg_obj
-        self.self = outer_self
+        self.client = client
 
     def __str__(self):
         class_name = self.__class__.__name__
@@ -35,7 +35,7 @@ class Message:
         msg_type = 2 if file_type == "image" else 4
 
         file_url_holder_req = requests.get("https://www.textnow.com/api/v3/attachment_url?message_type=2",
-                                           cookies=self.self.cookies, headers=self.self.headers)
+                                           cookies=self.client.cookies, headers=self.client.headers)
         if str(file_url_holder_req.status_code).startswith("2"):
             file_url_holder = json.loads(file_url_holder_req.text)["result"]
 
@@ -52,14 +52,14 @@ class Message:
                 }
 
                 place_file_req = requests.put(file_url_holder, data=raw, headers=headers_place_file,
-                                              cookies=self.self.cookies)
+                                              cookies=self.client.cookies)
                 if str(place_file_req.status_code).startswith("2"):
 
                     json_data = {
                         "contact_value": self.number,
                         "contact_type": 2, "read": 1,
                         "message_direction": 2, "message_type": msg_type,
-                        "from_name": self.self.username,
+                        "from_name": self.client.username,
                         "has_video": has_video,
                         "new": True,
                         "date": datetime.now().isoformat(),
@@ -68,12 +68,12 @@ class Message:
                     }
 
                     send_file_req = requests.post("https://www.textnow.com/api/v3/send_attachment", data=json_data,
-                                                  headers=self.self.headers, cookies=self.self.cookies)
+                                                  headers=self.client.headers, cookies=self.client.cookies)
                     return send_file_req
                 else:
-                    raise self.self.FailedRequest(str(place_file_req.status_code))
+                    raise self.client.FailedRequest(str(place_file_req.status_code))
         else:
-            raise self.self.FailedRequest(str(file_url_holder_req.status_code))
+            raise self.client.FailedRequest(str(file_url_holder_req.status_code))
 
     def send_sms(self, text):
         data = \
@@ -81,14 +81,14 @@ class Message:
                 'json': '{"contact_value":"' + self.number
                         + '","contact_type":2,"message":"' + text
                         + '","read":1,"message_direction":2,"message_type":1,"from_name":"'
-                        + self.self.username + '","has_video":false,"new":true,"date":"'
+                        + self.client.username + '","has_video":false,"new":true,"date":"'
                         + datetime.now().isoformat() + '"}'
             }
 
-        response = requests.post('https://www.textnow.com/api/users/' + self.self.username + '/messages',
-                                 headers=self.self.headers, cookies=self.self.cookies, data=data)
+        response = requests.post('https://www.textnow.com/api/users/' + self.client.username + '/messages',
+                                 headers=self.client.headers, cookies=self.client.cookies, data=data)
         if not str(response.status_code).startswith("2"):
-            self.self.request_handler(response.status_code)
+            self.client.request_handler(response.status_code)
         return response
 
     def mark_as_read(self):
@@ -98,7 +98,7 @@ class Message:
         if not all(key in self.raw for key in data):
             return
 
-        base_url = "https://www.textnow.com/api/users/" + self.self.username + "/conversations/"
+        base_url = "https://www.textnow.com/api/users/" + self.client.username + "/conversations/"
         url = base_url + quote(self.number)
 
         params = {
@@ -106,17 +106,17 @@ class Message:
             "http_method": "PATCH"
         }
 
-        res = requests.post(url, params=params, data=data, cookies=self.self.cookies, headers=self.self.headers)
+        res = requests.post(url, params=params, data=data, cookies=self.client.cookies, headers=self.client.headers)
         return res
 
     def wait_for_response(self, timeout_bool=True):
         self.mark_as_read()
-        for msg in self.self.get_unread_messages():
+        for msg in self.client.get_unread_messages():
             msg.mark_as_read()
         timeout = datetime.now() + relativedelta(minute=10)
         if not timeout_bool:
             while 1:
-                unread_msgs = self.self.get_unread_messages()
+                unread_msgs = self.client.get_unread_messages()
                 filtered = unread_msgs.get(number=self.number)
                 if len(filtered) == 0:
                     time.sleep(0.2)
@@ -125,7 +125,7 @@ class Message:
 
         else:
             while datetime.now() > timeout:
-                unread_msgs = self.self.get_unread_messages()
+                unread_msgs = self.client.get_unread_messages()
                 filtered = unread_msgs.get(number=self.number)
                 if len(filtered) == 0:
                     time.sleep(0.2)

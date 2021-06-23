@@ -1,8 +1,7 @@
 class MessageContainer(list):
-    def __init__(self, msg_list: list, outer_self):
+    def __init__(self, msg_list: list):
         super().__init__(msg_list)
         self.msg_list = msg_list
-        self.outer_self = outer_self
 
     def __str__(self):
         ss = [msg.__str__() for msg in self.msg_list]
@@ -16,4 +15,4 @@ class MessageContainer(list):
                 if all(getattr(msg, key) == val for key, val in msg.__dict__.items()):
                     filtered_list.append(msg)
 
-        return self.outer_self.MessageContainer(filtered_list, self.outer_self)
+        return MessageContainer(filtered_list)
