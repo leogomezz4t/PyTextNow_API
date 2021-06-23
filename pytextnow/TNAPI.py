@@ -1,19 +1,19 @@
 if __name__ == "__main__":
     from login import login
-    from error import FailedRequest, AuthError, InvalidEvent
-    from message_container import MessageContainer
-    from multi_media_message import MultiMediaMessage
-    from message import Message
-    from contact import Contact
-    from contact_container import ContactContainer
+    from TN_objects.error import FailedRequest, AuthError, InvalidEvent
+    from TN_objects.message_container import MessageContainer
+    from TN_objects.multi_media_message import MultiMediaMessage
+    from TN_objects.message import Message
+    from TN_objects.contact import Contact
+    from TN_objects.contact_container import ContactContainer
 else:
-    from pytextnow.login import login
-    from pytextnow.error import FailedRequest, AuthError, InvalidEvent
-    from pytextnow.message_container import MessageContainer
-    from pytextnow.multi_media_message import MultiMediaMessage
-    from pytextnow.message import Message
-    from pytextnow.contact import Contact
-    from pytextnow.contact_container import ContactContainer
+    from pytextnow.TN_objects.login import login
+    from pytextnow.TN_objects.error import FailedRequest, AuthError, InvalidEvent
+    from pytextnow.TN_objects.message_container import MessageContainer
+    from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
+    from pytextnow.TN_objects.message import Message
+    from pytextnow.TN_objects.contact import Contact
+    from pytextnow.TN_objects.contact_container import ContactContainer
 import mimetypes
 import requests
 from datetime import datetime, time

@@ -2,7 +2,6 @@ from datetime import datetime
 
 import mimetypes
 import json
-import requests
 
 class Contact:
     def __init__(self, raw_obj, client):
@@ -25,7 +24,7 @@ class Contact:
                         + datetime.now().isoformat() + '"}'
             }
 
-        response = requests.post('https://www.textnow.com/api/users/' + self.client.username + '/messages',
+        response = self.client.session.post('https://www.textnow.com/api/users/' + self.client.username + '/messages',
                                  headers=self.client.headers, cookies=self.client.cookies, data=data)
         if not str(response.status_code).startswith("2"):
             self.client.request_handler(response.status_code)
@@ -37,7 +36,7 @@ class Contact:
         has_video = True if file_type == "video" else False
         msg_type = 2 if file_type == "image" else 4
 
-        file_url_holder_req = requests.get("https://www.textnow.com/api/v3/attachment_url?message_type=2",
+        file_url_holder_req = self.client.session.get("https://www.textnow.com/api/v3/attachment_url?message_type=2",
                                            cookies=self.client.cookies, headers=self.client.headers)
         if str(file_url_holder_req.status_code).startswith("2"):
             file_url_holder = json.loads(file_url_holder_req.text)["result"]
@@ -54,7 +53,7 @@ class Contact:
                     "credentials": 'omit'
                 }
 
-                place_file_req = requests.put(file_url_holder, data=raw, headers=headers_place_file,
+                place_file_req = self.client.session.put(file_url_holder, data=raw, headers=headers_place_file,
                                               cookies=self.client.cookies)
                 if str(place_file_req.status_code).startswith("2"):
 
@@ -70,7 +69,7 @@ class Contact:
                         "media_type": file_type
                     }
 
-                    send_file_req = requests.post("https://www.textnow.com/api/v3/send_attachment", data=json_data,
+                    send_file_req = self.client.session.post("https://www.textnow.com/api/v3/send_attachment", data=json_data,
                                                   headers=self.client.headers, cookies=self.client.cookies)
                     return send_file_req
                 else:
