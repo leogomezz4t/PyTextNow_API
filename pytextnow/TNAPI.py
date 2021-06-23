@@ -4,12 +4,14 @@ if __name__ == "__main__":
     from TN_objects.multi_media_message import MultiMediaMessage
     from TN_objects.message import Message
     from TN_objects.contact import Contact
+    from constants import *
 else:
     from pytextnow.TN_objects.login import login
     from pytextnow.TN_objects.error import FailedRequest, AuthError, InvalidEvent
     from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
     from pytextnow.TN_objects.message import Message
     from pytextnow.TN_objects.contact import Contact
+    from pytextnow.constants import *
 import mimetypes
 import requests
 from datetime import datetime, time
@@ -19,15 +21,6 @@ import json
 from os.path import realpath, dirname, join
 import time
 import atexit
-
-MESSAGE_TYPE = 0
-MULTIMEDIA_MESSAGE_TYPE = 1
-
-SENT_MESSAGE_TYPE = 2
-RECEIVED_MESSAGE_TYPE = 1
-
-SIP_ENDPOINT = "prod.tncp.textnow.com"
-
 
 class Client:
     def __init__(self, username: str = None, cookie=None):
