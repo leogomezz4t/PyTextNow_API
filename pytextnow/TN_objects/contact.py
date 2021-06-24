@@ -3,17 +3,18 @@ from datetime import datetime
 import mimetypes
 import json
 
+
 class Contact:
     def __init__(self, raw_obj, client):
         self.raw_obj = raw_obj
         self.client = client
         self.number = self.raw_obj["contact_value"]
         self.name = self.raw_obj["name"]
-    
+
     def __str__(self):
         s = f"<Contact number={self.number}, name={self.name}>"
         return s
-    
+
     def send_sms(self, text):
         data = \
             {
@@ -25,11 +26,11 @@ class Contact:
             }
 
         response = self.client.session.post('https://www.textnow.com/api/users/' + self.client.username + '/messages',
-                                 headers=self.client.headers, cookies=self.client.cookies, data=data)
+                                            headers=self.client.headers, cookies=self.client.cookies, data=data)
         if not str(response.status_code).startswith("2"):
             self.client.request_handler(response.status_code)
         return response
-    
+
     def send_mms(self, file):
         mime_type = mimetypes.guess_type(file)[0]
         file_type = mime_type.split("/")[0]
@@ -37,7 +38,7 @@ class Contact:
         msg_type = 2 if file_type == "image" else 4
 
         file_url_holder_req = self.client.session.get("https://www.textnow.com/api/v3/attachment_url?message_type=2",
-                                           cookies=self.client.cookies, headers=self.client.headers)
+                                                      cookies=self.client.cookies, headers=self.client.headers)
         if str(file_url_holder_req.status_code).startswith("2"):
             file_url_holder = json.loads(file_url_holder_req.text)["result"]
 
@@ -54,7 +55,7 @@ class Contact:
                 }
 
                 place_file_req = self.client.session.put(file_url_holder, data=raw, headers=headers_place_file,
-                                              cookies=self.client.cookies)
+                                                         cookies=self.client.cookies)
                 if str(place_file_req.status_code).startswith("2"):
 
                     json_data = {
@@ -69,8 +70,9 @@ class Contact:
                         "media_type": file_type
                     }
 
-                    send_file_req = self.client.session.post("https://www.textnow.com/api/v3/send_attachment", data=json_data,
-                                                  headers=self.client.headers, cookies=self.client.cookies)
+                    send_file_req = self.client.session.post("https://www.textnow.com/api/v3/send_attachment",
+                                                             data=json_data,
+                                                             headers=self.client.headers, cookies=self.client.cookies)
                     return send_file_req
                 else:
                     raise self.client.FailedRequest(str(place_file_req.status_code))

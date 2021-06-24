@@ -1,12 +1,13 @@
-from TN_objects.container import Container
-from TN_objects.contact import Contact
-from TN_objects.user import User
+from pytextnow.TN_objects.container import Container
+from pytextnow.TN_objects.contact import Contact
+from pytextnow.TN_objects.user import User
+from pytextnow.tools.utils import map_to_class
+from pytextnow.database.objects import Results
+
 import datetime
 import sqlite3
 import typing
 
-from objects import Results
-from tools.utils import map_to_class
 
 class __BaseDatabaseHandler(object):
   # CRUD

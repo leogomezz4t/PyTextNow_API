@@ -4,7 +4,8 @@ handler
 """
 import datetime
 import typing
-from tools.utils import map_to_class, str_to_date
+from pytextnow.tools.utils import map_to_class, str_to_date
+
 
 class Results(object):
     """

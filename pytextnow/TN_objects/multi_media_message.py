@@ -1,4 +1,4 @@
-from TN_objects.message import Message
+from pytextnow.TN_objects.message import Message
 
 MULTIMEDIA_MESSAGE_TYPE = 1
 

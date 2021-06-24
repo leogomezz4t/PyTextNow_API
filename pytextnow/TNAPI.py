@@ -1,10 +1,10 @@
-from pytextnow.login import login
+from pytextnow.tools.utils import login
 from pytextnow.TN_objects.error import FailedRequest, AuthError, InvalidEvent
 from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
 from pytextnow.TN_objects.message import Message
 from pytextnow.TN_objects.container import Container
 from pytextnow.TN_objects.contact import Contact
-from pytextnow.constants import *
+from pytextnow.tools.constants import *
 
 import mimetypes
 import requests

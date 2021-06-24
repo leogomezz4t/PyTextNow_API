@@ -1,12 +1,12 @@
-from database.objects import Results
-from TN_objects.contact_container import ContactContainer
-from TN_objects.message_container import MessageContainer
+from pytextnow.database.objects import Results
+from pytextnow.TN_objects.contact import Contact
+from pytextnow.TN_objects.message import Message
+from pytextnow.TN_objects.container import Container
+from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
+from pytextnow.TN_objects.user import User
+from pytextnow.tools.constants import *
 import datetime
-from TN_objects.contact import Contact
-from TN_objects.message import Message
-from TN_objects.multi_media_message import MultiMediaMessage
-from TN_objects.user import User
-from constants import *
+
 
 def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=False, or_none=False):
     """
@@ -21,9 +21,10 @@ def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=Fal
             "Location: tools -> utils.py -> map_to_class()"
         )
     containers = {
-        MESSAGE_TYPE: MessageContainer,
-        CONTACT_TYPE: ContactContainer,
+        MESSAGE_TYPE: Container,
+        CONTACT_TYPE: Container,
     }
+
     def __map_it(data_dict):
         objects = {
             MESSAGE_TYPE: Message,
@@ -43,20 +44,20 @@ def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=Fal
                 # Warn the developer and continue trying to map attrs
                 else:
                     print(
-                            f"WARNING: Object of type {data_dict.get('object_type')} "
-                            f"does not have the attribute {attr}. There may be "
-                            "missing information in your class!!"
-                            "\n\n!!!Disregard if updating a record or inserting an incomplete record!!!"
-                        )
+                        f"WARNING: Object of type {data_dict.get('object_type')} "
+                        f"does not have the attribute {attr}. There may be "
+                        "missing information in your class!!"
+                        "\n\n!!!Disregard if updating a record or inserting an incomplete record!!!"
+                    )
             return obj
 
             # 
         # Find the object we must map to
         # FIX ME - SymanticError("
         # # {'name': "Trippy"}
-            # {'name': "", 'number': ""}
-            # We have a name so does the other dict - assign current to mapped_obj
-            # We don't have name, don't assign and move on")
+        # {'name': "", 'number': ""}
+        # We have a name so does the other dict - assign current to mapped_obj
+        # We don't have name, don't assign and move on")
         for obj in objects.values():
             for attr in obj.__dict__.keys():
                 # Mismatched attributes, go to the next object
@@ -97,7 +98,7 @@ def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=Fal
                 "Location: tools -> utils.py -> map_to_class()"
             )
     return __map_it(data_dict)
-    
+
 
 def serialize(obj):
     """
@@ -113,9 +114,19 @@ def str_to_date(string):
     """
     # This may not work
     return datetime.datetime.strptime(string)
-    
+
+
 def date_to_str(dt_time):
     """
     Convert a date time object into a string
     """
-    return 10000*dt_time.year + 100*dt_time.month + dt_time.day
+    return 10000 * dt_time.year + 100 * dt_time.month + dt_time.day
+
+
+def login():
+    print("Go to https://www.textnow.com/messaging and open developer tools")
+    print("\n")
+    print("Open application tab and copy connect.sid cookie and paste it here.")
+    sid = input("connect.sid: ")
+
+    return sid
