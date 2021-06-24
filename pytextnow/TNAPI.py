@@ -1,19 +1,11 @@
-if __name__ == "__main__":
-    from login import login
-    from TN_objects.error import FailedRequest, AuthError, InvalidEvent
-    from TN_objects.multi_media_message import MultiMediaMessage
-    from TN_objects.message import Message
-    from TN_objects.contact import Contact
-    from constants import *
-else:
-    from login import login
-    from TN_objects.error import FailedRequest, AuthError, InvalidEvent
-    from TN_objects.multi_media_message import MultiMediaMessage
-    from TN_objects.message import Message
-    from TN_objects.message_container import MessageContainer
-    from TN_objects.contact import Contact
-    from TN_objects.contact_container import ContactContainer
-    from constants import *
+from login import login
+from TN_objects.error import FailedRequest, AuthError, InvalidEvent
+from TN_objects.multi_media_message import MultiMediaMessage
+from TN_objects.message import Message
+from TN_objects.container import Container
+from TN_objects.contact import Contact
+from constants import *
+
 import mimetypes
 import requests
 from datetime import datetime, time
@@ -120,7 +112,7 @@ class Client:
     def get_contacts(self):
         raw_contacts = self.get_raw_contacts()
         contact_list = [Contact(contact, self) for contact in raw_contacts]
-        contacts = ContactContainer(contact_list, self)
+        contacts = Container(contact_list, self)
         return contacts
 
     def get_messages(self):
@@ -128,7 +120,7 @@ class Client:
             This gets most of the messages both sent and received. However It won't get all of them just the past 10-15
         """
         message_list = [Message(msg, self) if msg["type"] == MESSAGE_TYPE else MultiMediaMessage(msg, self) for msg in self.get_raw_messages()]
-        messages = MessageContainer(message_list, self)
+        messages = Container(message_list, self)
         return messages
 
     def get_raw_messages(self):
@@ -156,7 +148,7 @@ class Client:
         sent_messages = self.get_messages()
         sent_messages = [msg for msg in sent_messages if msg.direction == SENT_MESSAGE_TYPE]
 
-        return MessageContainer(sent_messages, self)
+        return Container(sent_messages, self)
 
     def get_received_messages(self):
         """
@@ -165,7 +157,7 @@ class Client:
         messages = self.get_messages()
         messages = [msg for msg in messages if msg.direction == RECEIVED_MESSAGE_TYPE]
 
-        return MessageContainer(messages, self)
+        return Container(messages, self)
 
     def get_unread_messages(self):
         """
@@ -174,7 +166,7 @@ class Client:
         new_messages = self.get_received_messages()
         new_messages = [msg for msg in new_messages if not msg.read]
 
-        return MessageContainer(new_messages, self)
+        return Container(new_messages, self)
 
     def get_read_messages(self):
         """
@@ -183,7 +175,7 @@ class Client:
         new_messages = self.get_received_messages()
         new_messages = [msg for msg in new_messages if msg.read]
 
-        return MessageContainer(new_messages, self)
+        return Container(new_messages, self)
 
     def send_mms(self, to, file):
         """
