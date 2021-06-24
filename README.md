@@ -103,7 +103,7 @@ sent_messages = client.get_sent_messages() -> Container list
 
 ### How to filter messages
 ```python
-filtered = client.get_messages().get(number="number")
+filtered = client.get_messages().filter(number="number")
 ```
 
 ### How to get contacts
@@ -115,7 +115,7 @@ print(contacts[0].name)
 
 ### How to filter contacts
 ```python
-filtered = contacts.get(name="Alice")
+filtered = contacts.filter(name="Alice")
 ```
 
 ### How to synchronously block until a response

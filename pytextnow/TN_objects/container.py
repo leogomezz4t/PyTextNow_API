@@ -8,7 +8,7 @@ class Container(list):
         s = '[' + "\n".join(ss) + ']'
         return s
 
-    def get(self, **kwargs):
+    def filter(self, **kwargs):
         filtered_list = []
         for item in self.item_list:
             if all(key in item.__dict__.keys() for key in kwargs):
