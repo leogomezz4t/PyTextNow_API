@@ -1,4 +1,4 @@
-from TN_objects.contact_container import ContactContainer
+from TN_objects.container import Container
 from TN_objects.contact import Contact
 from TN_objects.user import User
 import datetime
@@ -476,7 +476,7 @@ class DatabaseHandler(__BaseDatabaseHandler):
     def create_contact(self, data: typing.Dict[str, str]) -> Contact:
         self.__create_record('contacts', data)
 
-    def get_all_contacts(self) -> ContactContainer:
+    def get_all_contacts(self) -> Container:
         # returns results by default
         return self.__execute_sql("SELECT * FROM contacts;")
 
