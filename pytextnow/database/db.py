@@ -19,6 +19,7 @@ class __BaseDatabaseHandler(object):
         self.__database = sqlite3.connect(self.__db_name)
         self.__cursor = self.__database.cursor()
         # In case we want to change the database at somepoint
+        self.__table_names = {}
         self.__tables = schema if schema else {
             # Should be valid and dynamically compatible
             "sms" : {
@@ -157,7 +158,8 @@ class __BaseDatabaseHandler(object):
         :return: project id
         """
         self.__validate_data(new_data)
-        if obj_id := not new_data.get('id', None):
+        obj_id = new_data.get('id', None)
+        if not obj_id:
             raise Exception(
                 "You must pass the object id to update a record! "
                 "Location: db.py -> DatabaseHandler -> update_obj()"
@@ -204,7 +206,8 @@ class __BaseDatabaseHandler(object):
         for table_name, data in table_data.items():
             # Validation
             self.__validate_data(data)
-            if obj_id := not data.get("id", None):
+            obj_id = data.get('id', None)
+            if not obj_id:
                 raise Exception(
                     f"ERROR: You must pass IDs with every object you wish to update! "
                     "Location: db.py -> DatabaseHandler -> bulk_update()"
@@ -449,7 +452,8 @@ class DatabaseHandler(__BaseDatabaseHandler):
         If no value, prompt for login OR raise exception.
         """
         results = dict(self.__filter("user_sids", {'username': username}))
-        if result_len := len(results) > 1 and not username:
+        result_len = len(results)
+        if result_len > 1 and not username:
             raise Exception(
                                 "There is more than one record in the user_sids table. "
                                 "Please provide a username and retry;"
