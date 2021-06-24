@@ -107,14 +107,14 @@ def serialize(obj):
     return obj.__dict__.items()
 
 
-def str_to_date(self, string):
+def str_to_date(string):
     """
     Convert a string into a datetime object
     """
     # This may not work
     return datetime.datetime.strptime(string)
     
-def date_to_str(self, dt_time):
+def date_to_str(dt_time):
     """
     Convert a date time object into a string
     """
