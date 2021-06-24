@@ -92,18 +92,30 @@ for message in new_messages:
 ```
 ### How to get all messages
 ```python
-messages = client.get_messages() -> MessageContainer list
+messages = client.get_messages() -> Container list
 # Same as above
 ```
 ### How to get all sent messages
 ```python 
-sent_messages = client.get_sent_messages() -> MessageContainer list
+sent_messages = client.get_sent_messages() -> Container list
 #Same as above
 ```
 
 ### How to filter messages
 ```python
 filtered = client.get_messages().get(number="number")
+```
+
+### How to get contacts
+```python
+contacts = client.get_contacts()
+print(contacts[0].number)
+print(contacts[0].name)
+```
+
+### How to filter contacts
+```python
+filtered = contacts.get(name="Alice")
 ```
 
 ### How to synchronously block until a response
