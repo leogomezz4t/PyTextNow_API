@@ -8,7 +8,7 @@ from pytextnow.tools.constants import *
 import datetime
 
 
-def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=False, or_none=False):
+def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False):
     """
     Take in a dictionary and match the information inside of it to
     an object then loop the keys/values (attributes and values),
@@ -20,6 +20,7 @@ def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=Fal
             "multiple=True and a list of data dictionaries "
             "Location: tools -> utils.py -> map_to_class()"
         )
+
     containers = {
         MESSAGE_TYPE: Container,
         CONTACT_TYPE: Container,
@@ -43,12 +44,14 @@ def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=Fal
                     setattr(obj, attr, value)
                 # Warn the developer and continue trying to map attrs
                 else:
+                    # Mainly a debug
                     print(
                         f"WARNING: Object of type {data_dict.get('object_type')} "
                         f"does not have the attribute {attr}. There may be "
                         "missing information in your class!!"
                         "\n\n!!!Disregard if updating a record or inserting an incomplete record!!!"
                     )
+
             return obj
 
             # 
@@ -85,11 +88,11 @@ def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=Fal
         if data_dicts and len(data_dicts) > 0:
             objs = []
             for data_dict in data_dicts:
-                objs.append()
+                objs.append(__map_it(data_dict))
             # Wrap the objects in the appropriate container
             # or return a normal list of objects
-            container = containers.get(objs[0].object_type, None)(objs)
-            return container if container and dynamic_map else Results(objs)
+            container = Container(objs)
+            return container
         elif or_none:
             return None
         else:
