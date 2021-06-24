@@ -3,6 +3,7 @@
 
 ## Credit
 - Developer: Leonardo Wu-Gomez
+- Collaborators: 
 - Reddit: [leogomezz4t](https://www.reddit.com/user/leogomezz4t)
 - Please tell me if you have any ideas for the API or reporting a bug
 
