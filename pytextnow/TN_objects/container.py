@@ -17,6 +17,8 @@ class Container(list):
 
         return Container(filtered_list)
 
+    # is this necessary?
+    # where is it being used?
     def get(item_list, **kwargs):
         filtered_list = []
         for item in item_list:

@@ -16,6 +16,7 @@ from os.path import realpath, dirname, join
 import time
 import atexit
 
+
 class Client:
     def __init__(self, username: str = None, cookie=None):
         # Load SIDS
@@ -112,15 +113,16 @@ class Client:
     def get_contacts(self):
         raw_contacts = self.get_raw_contacts()
         contact_list = [Contact(contact, self) for contact in raw_contacts]
-        contacts = Container(contact_list, self)
+        contacts = Container(contact_list)
         return contacts
 
     def get_messages(self):
         """
             This gets most of the messages both sent and received. However It won't get all of them just the past 10-15
         """
-        message_list = [Message(msg, self) if msg["type"] == MESSAGE_TYPE else MultiMediaMessage(msg, self) for msg in self.get_raw_messages()]
-        messages = Container(message_list, self)
+        message_list = [Message(msg, self) if msg["type"] == MESSAGE_TYPE else MultiMediaMessage(msg, self) for msg in
+                        self.get_raw_messages()]
+        messages = Container(message_list)
         return messages
 
     def get_raw_messages(self):
@@ -129,11 +131,13 @@ class Client:
         """
         all_messages = []
         for contact in self.get_contacts():
-            req = self.session.get("https://www.textnow.com/api/users/" + self.username + f"/messages?contact_value={contact.number}&start_message_id=99999999999999&direction=past&page_size=200&get_archived=1", headers=self.headers, cookies=self.cookies)
+            req = self.session.get(
+                "https://www.textnow.com/api/users/" + self.username + f"/messages?contact_value={contact.number}&start_message_id=99999999999999&direction=past&page_size=200&get_archived=1",
+                headers=self.headers, cookies=self.cookies)
             self.session.get(req.url)
             if req.cookies['connect.sid'] != self._user_sid:
                 print(req.cookies["connect.sid"])
-                self._user_sid = req.cookies["connect.sid"]                   
+                self._user_sid = req.cookies["connect.sid"]
             if str(req.status_code).startswith("2"):
                 messages = json.loads(req.content)
                 all_messages.append(messages["messages"])
@@ -148,7 +152,7 @@ class Client:
         sent_messages = self.get_messages()
         sent_messages = [msg for msg in sent_messages if msg.direction == SENT_MESSAGE_TYPE]
 
-        return Container(sent_messages, self)
+        return Container(sent_messages)
 
     def get_received_messages(self):
         """
@@ -157,7 +161,7 @@ class Client:
         messages = self.get_messages()
         messages = [msg for msg in messages if msg.direction == RECEIVED_MESSAGE_TYPE]
 
-        return Container(messages, self)
+        return Container(messages)
 
     def get_unread_messages(self):
         """
@@ -166,7 +170,7 @@ class Client:
         new_messages = self.get_received_messages()
         new_messages = [msg for msg in new_messages if not msg.read]
 
-        return Container(new_messages, self)
+        return Container(new_messages)
 
     def get_read_messages(self):
         """
@@ -175,7 +179,7 @@ class Client:
         new_messages = self.get_received_messages()
         new_messages = [msg for msg in new_messages if msg.read]
 
-        return Container(new_messages, self)
+        return Container(new_messages)
 
     def send_mms(self, to, file):
         """
@@ -187,7 +191,7 @@ class Client:
         msg_type = 2 if file_type == "image" else 4
 
         file_url_holder_req = self.session.get("https://www.textnow.com/api/v3/attachment_url?message_type=2",
-                                           cookies=self.cookies, headers=self.headers)
+                                               cookies=self.cookies, headers=self.headers)
         if file_url_holder_req.cookies['connect.sid'] != self._user_sid:
             print(file_url_holder_req.cookies["connect.sid"])
             self._user_sid = file_url_holder_req.cookies["connect.sid"]
@@ -207,7 +211,7 @@ class Client:
                 }
 
                 place_file_req = self.session.put(file_url_holder, data=raw, headers=headers_place_file,
-                                              cookies=self.cookies)
+                                                  cookies=self.cookies)
 
                 self.session.get(place_file_req.url)
                 if place_file_req.cookies['connect.sid'] != self._user_sid:
@@ -228,7 +232,7 @@ class Client:
                     }
 
                     send_file_req = self.session.post("https://www.textnow.com/api/v3/send_attachment", data=json_data,
-                                                  headers=self.headers, cookies=self.cookies)
+                                                      headers=self.headers, cookies=self.cookies)
                     return send_file_req
                 else:
                     self.request_handler(place_file_req.status_code)
@@ -249,7 +253,7 @@ class Client:
             }
 
         response = self.session.post('https://www.textnow.com/api/users/' + self.username + '/messages',
-                                 headers=self.headers, cookies=self.cookies, data=data)
+                                     headers=self.headers, cookies=self.cookies, data=data)
         self.session.get(response.url)
         if response.cookies['connect.sid'] != self._user_sid:
             print(response.cookies["connect.sid"])
@@ -292,4 +296,3 @@ class Client:
     def request_handler(self, status_code: int):
         status_code = str(status_code)
         raise FailedRequest(status_code)
-

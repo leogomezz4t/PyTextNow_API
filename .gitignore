@@ -814,3 +814,6 @@ $RECYCLE.BIN/
 .history/
 
 /.idea/
+
+# ignore user_sids.json
+pytextnow/user_sids.json
