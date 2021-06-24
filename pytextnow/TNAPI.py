@@ -1,10 +1,10 @@
-from login import login
-from TN_objects.error import FailedRequest, AuthError, InvalidEvent
-from TN_objects.multi_media_message import MultiMediaMessage
-from TN_objects.message import Message
-from TN_objects.container import Container
-from TN_objects.contact import Contact
-from constants import *
+from pytextnow.login import login
+from pytextnow.TN_objects.error import FailedRequest, AuthError, InvalidEvent
+from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
+from pytextnow.TN_objects.message import Message
+from pytextnow.TN_objects.container import Container
+from pytextnow.TN_objects.contact import Contact
+from pytextnow.constants import *
 
 import mimetypes
 import requests
@@ -47,7 +47,7 @@ class Client:
                 with open(self._user_sid_file, "w") as file:
                     file.write(json.dumps(self._user_sid))
         else:
-            sid = cookie if cookie else login()
+            sid = cookie if cookie else login.login()
             self.cookies = {
                 'connect.sid': sid
             }
