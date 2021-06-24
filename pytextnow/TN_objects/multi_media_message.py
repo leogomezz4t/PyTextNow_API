@@ -1,7 +1,4 @@
-try:
-    from pytextnow.TN_objects.message import Message
-except ModuleNotFoundError:
-    from TN_objects.message import Message
+from TN_objects.message import Message
 
 MULTIMEDIA_MESSAGE_TYPE = 1
 
