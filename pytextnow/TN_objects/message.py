@@ -1,5 +1,5 @@
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
+import datetime as dt
 from urllib.parse import quote
 
 import mimetypes
@@ -112,7 +112,7 @@ class Message:
         self.mark_as_read()
         for msg in self.client.get_unread_messages():
             msg.mark_as_read()
-        timeout = datetime.now() + relativedelta(minute=10)
+        timeout = datetime.now() + dt.timedelta(minute=10)
         if not timeout_bool:
             while 1:
                 unread_msgs = self.client.get_unread_messages()
