@@ -173,10 +173,11 @@ class __BaseDatabaseHandler(object):
                 SET {set_data}
                 WHERE id = {obj_id}"""
 
+        # Return 
         return self.__execute_sql(
             sql, tuple(ordered_values),
             return_results=False
-        ).objects[0]
+        ).first()
 
     def __bulk_update(
             self,
@@ -196,6 +197,7 @@ class __BaseDatabaseHandler(object):
                 "ERROR: The data dictionary cannot be empty! "
                 "Location: db.py -> DatabaseHandler -> bulk_update()"
             )
+        results = []
         # Each table gets its own update statement
         for table_name, data in table_data.items():
             # Validation
@@ -218,7 +220,7 @@ class __BaseDatabaseHandler(object):
             # Produces
             # UPDATE user_sids SET username = some_username, sid = some_sid WHERE id = 2;
             # Execute the query
-            self.__execute_sql(
+            results.append(self.__execute_sql(
                 base_query
                 +clean_set_clause
                 +where_clause
@@ -226,7 +228,9 @@ class __BaseDatabaseHandler(object):
                 tuple(set_data),
                 commit=True,
                 return_results=return_objs
-            )
+            ))
+        if return_objs:
+            return Results(results)
 
     def ___delete_obj(self, table_name: str, obj_id: int) -> None:
         """

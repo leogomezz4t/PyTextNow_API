@@ -18,14 +18,16 @@ class Results(object):
         """
         # Automated validation happens in map_to_class
         if ordering == "desc-date":
-            self.objects = self.order_by(map_to_class(data_dicts=results, multiple=True))
+            self.objects = self.order_by(map_to_class(data_dicts=results, multiple=True, or_none=True))
         else:
             raise NotImplementedError(
                 "Orderings other than descending date are not yet implemented.\n\n"
                 "Please submit a Pull Request if you feel so inclined"
             )
-        self.organized = self.__organize_results()
         super().__init__()
+
+    def first(self):
+        return self.objects if isinstance(self.objects, None) else self.objects[0]
 
     def filter(self, conditions: typing.Dict[str, str]):
         """

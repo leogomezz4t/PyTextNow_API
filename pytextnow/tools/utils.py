@@ -8,7 +8,7 @@ from TN_objects.multi_media_message import MultiMediaMessage
 from TN_objects.user import User
 from constants import *
 
-def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=False):
+def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=False, or_none=False):
     """
     Take in a dictionary and match the information inside of it to
     an object then loop the keys/values (attributes and values),
@@ -81,7 +81,7 @@ def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=Fal
         return mapped_obj
 
     if multiple:
-        if data_dicts:
+        if data_dicts and len(data_dicts) > 0:
             objs = []
             for data_dict in data_dicts:
                 objs.append()
@@ -89,6 +89,8 @@ def map_to_class(data_dict=None, dynamic_map=True, data_dicts=None, multiple=Fal
             # or return a normal list of objects
             container = containers.get(objs[0].object_type, None)(objs)
             return container if container and dynamic_map else Results(objs)
+        elif or_none:
+            return None
         else:
             raise Exception(
                 "ERROR: List of data dictionaries cannot be None or empty!"
