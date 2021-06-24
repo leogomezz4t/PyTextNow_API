@@ -5,7 +5,6 @@ import datetime
 import sqlite3
 import typing
 
-from objects import Results
 from tools.utils import map_to_class
 
 class __BaseDatabaseHandler(object):
@@ -59,6 +58,7 @@ class __BaseDatabaseHandler(object):
                 "object_type": "INTEGER" # 4
             },
         }
+        self.__create_tables()
 
     def __create_record(
             self, table_name: str,
@@ -133,7 +133,7 @@ class __BaseDatabaseHandler(object):
     def __filter(
             self, table_name: str,
             filters: typing.Dict[str, typing.Union[str, int, bool]]
-        ) -> Results:
+        ) -> Container:
         """
         Filter a table based on the given parameters
         """
@@ -183,7 +183,7 @@ class __BaseDatabaseHandler(object):
             self,
             table_data: typing.Dict[str, typing.Dict[str, str]],
             return_objs: bool = False
-        ) -> typing.Union[Results, None]:
+        ) -> typing.Union[Container, None]:
         """
         Construct update operations then execute and commit the
         changes after fully building out the sql command
@@ -230,7 +230,7 @@ class __BaseDatabaseHandler(object):
                 return_results=return_objs
             ))
         if return_objs:
-            return Results(results)
+            return Container(results)
 
     def ___delete_obj(self, table_name: str, obj_id: int) -> None:
         """
@@ -247,7 +247,7 @@ class __BaseDatabaseHandler(object):
   # Utilities
     def __create_tables(self) -> None:
         """
-        Create the default tables defined in self.__tables
+        Create the tables defined in self.__tables
         """
         for table_name, col_info in self.__tables.items():
             self.__create_table(table_name, col_info)
@@ -310,7 +310,7 @@ class __BaseDatabaseHandler(object):
                 try:
                     if dynamic_map:
                         return map_to_class(data_dicts=result_dicts, multple=True)
-                    return Results(result_dicts)
+                    return Container(result_dicts)
                 except:
                     raise NotImplementedError(
                         "Error handling for failed Result instantiation is not yet implemented!"
@@ -405,12 +405,15 @@ class DatabaseHandler(__BaseDatabaseHandler):
     """
     High level API for database interactions
     """
-    def __init__(self, db_name: str = "text_nowAPI.sqlite3") -> None:
+    def __init__(
+            self, schema: typing.Union[None, str] = None,
+            db_name: str = "text_nowAPI.sqlite3"
+        ) -> None:
         self.__db_name = db_name
         # Connect by default
-        super(DatabaseHandler, self).__init__(self.__db_name)
+        super(DatabaseHandler, self).__init__(self.__db_name, schema=schema)
 
-    def filter(self, table_name: str,  filters: typing.Dict[str, str]) -> Results:
+    def filter(self, table_name: str,  filters: typing.Dict[str, str]) -> Container:
         """
         Take in a dictionary whose keys are field names and values
         are the expected values in the contacts tables
