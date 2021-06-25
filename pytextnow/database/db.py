@@ -1,8 +1,10 @@
 from pytextnow.TN_objects.container import Container
+from pytextnow.TN_objects.message import Message
+from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
 from pytextnow.TN_objects.contact import Contact
 from pytextnow.TN_objects.user import User
+
 from pytextnow.tools.utils import map_to_class
-from pytextnow.database.objects import Results
 
 import datetime
 import sqlite3
@@ -19,7 +21,7 @@ class __BaseDatabaseHandler(object):
         self.__database = sqlite3.connect(self.__db_name)
         self.__cursor = self.__database.cursor()
         # In case we want to change the database at somepoint
-        self.__table_names = {}
+        self.__table_names = self.__assign_table_names()
         self.__tables = schema if schema else {
             # Should be valid and dynamically compatible
             "sms" : {
@@ -48,7 +50,7 @@ class __BaseDatabaseHandler(object):
                 'type': "INTEGER",
                 "object_type": "INTEGER" # 2
             },
-            "user_sids": {
+            "users": {
                 'id': "INTEGER",
                 'username': "TEXT",
                 "sid": "TEXT",
@@ -250,6 +252,72 @@ class __BaseDatabaseHandler(object):
         )
 
   # Utilities
+    def __assign_table_names(self):
+        """
+        NOTE: This relies on each table having at least one
+        uniquely identifying atttribute
+        (Meaning Message and MultiMediaMessage can't have the exact same columns)
+
+
+        Figure out which object corresponds to which table name
+        and set the keys of self.__table_names to all object
+        names. Loo
+        """
+        objs = [
+            Message,
+            MultiMediaMessage,
+            Contact,
+            User,
+        ]
+        # If the length of names is less than or greather than that of
+        # the tables, raise an Exception
+        if len(objs) < len(self.__tables.keys()) or len(objs) > len(self.__tables):
+            raise Exception(
+                "You cannot have more tables than objects nor more objects than tables "
+                "because the database results need something to be mapped to/represented by! "
+                "Location: db.py -> __BaseDatabaseHandler -> __assign_table_names()"
+            )
+        obj_names = {}
+        exact_match = False
+        current_table_name = ""
+        # Loop objects
+        for obj in objs:
+            # Loop tables and column data
+            for table_name, col_data in self.__tables.items():
+                current_table_name = table_name
+                # Loop the fields in the column data
+                for field in col_data.keys():
+                    # If the obj doesn't have this attribute break
+                    # and set exact_match flag to False
+                    if not hasattr(obj, field):
+                        exact_match = False
+                        break
+                    # If it does have the attribute set exact match to True
+                    # Then move to the next field
+                    else:
+                        exact_match = True
+                        continue
+                # If we have an exact match, don't go to the next table
+                # break out instead
+                if exact_match:
+                    break
+            # If we have an exact match assign the the current table name
+            # to the object name in the obj_names dictionary
+            if exact_match:
+                obj_names[obj.__name__] = current_table_name
+        if (
+            len(obj_names.keys()) < len(self.__tables.keys())
+            or len(obj_names.keys()) > len(self.__tables.keys())
+            ):
+            raise Exception(
+                "ERROR: Got an uneven number of tables and objects after assigning table names. "
+                "Hint: Make sure there is one table per object and each table has all attributes "
+                "of the object it represents. "
+                "Location: db.py -> __BaseDatabaseHandler -> __assign_table_names()"
+            )
+        return obj_names
+        
+
     def __create_tables(self) -> None:
         """
         Create the tables defined in self.__tables
@@ -441,7 +509,7 @@ class DatabaseHandler(__BaseDatabaseHandler):
 
         :param data: Dictionary that holds data to insert
         """
-        return self.__create_record("user_sids", data)
+        return self.__create_record(self.__table_names.get('User'), data)
 
     def get_user(self, username: str = None) -> typing.Union[User, None]:
         """
@@ -451,7 +519,7 @@ class DatabaseHandler(__BaseDatabaseHandler):
         
         If no value, prompt for login OR raise exception.
         """
-        results = dict(self.__filter("user_sids", {'username': username}))
+        results = self.__filter(self.__table_names.get('User'), {'username': username})
         result_len = len(results)
         if result_len > 1 and not username:
             raise Exception(
@@ -475,32 +543,40 @@ class DatabaseHandler(__BaseDatabaseHandler):
 
         :param new_data: Dictionary whose keys are fields and values
             are the new values for the field.
+            MUST contain a key 'id' with an integer value of an existing object
         """
-        return self.__update_obj('user_sids', new_data)
+        return self.__update_obj(self.__table_names.get('User'), new_data)
 
     def delete_user(self, id: int) -> None:
-        self.__delete_obj("user_sids", id)
+        self.__delete_obj(self.__table_names.get('User'), id)
 
   # Contacts
     def create_contact(self, data: typing.Dict[str, str]) -> Contact:
-        self.__create_record('contacts', data)
+        self.__create_record(self.__table_names.get('Contact'), data)
 
     def get_all_contacts(self) -> Container:
         # returns results by default
         return self.__execute_sql("SELECT * FROM contacts;")
 
-    def update_contact(self, info_dict, return_obj=True):
+    def update_contact(
+            self, info_dict,
+            return_obj=True
+        ) -> typing.Union[None, Contact]:
+        """
+        :param info_dict: Dictionary with new information to update the record with
+            MUST contain a key 'id' with an integer value of an existing object
+        """
         if return_obj:
-            return self.__update_obj('contacts', info_dict)
+            return self.__update_obj(self.__table_names.get('Contact'), info_dict)
         else:
-            self.__update_obj('contacts', info_dict)
+            self.__update_obj(self.__table_names.get('Contact'), info_dict)
 
     def delete_contact(self):
         self.__delete_obj()
 
   # SMS
     def create_message(self, data):
-        self.__create_record('sms', data)
+        self.__create_record(self.__table_names.get('Message'), data)
 
     def get_all_sms(self, sent=False, received=True):
         """
@@ -511,14 +587,13 @@ class DatabaseHandler(__BaseDatabaseHandler):
             ordered by the time they were received (newest first)
         """
         if sent:
-            return self.__filter('sms', {'sent': "True"})
+            # TODO: Either make sent/received attrs in Message object or figure out which
+                # fields can represent them
+            return self.__filter(self.__table_names.get('Message'), {'sent': "True"})
         elif received:
-            return self.__filter('sms', {'received': "True"})
+            return self.__filter(self.__table_names.get('Message'), {'received': "True"})
         # Return both sent and received
-        return map_to_class(
-            self.__dict_factory(self.__execute_sql("FROM sms SELECT *")),
-            multiple=True
-        )
+        return self.__execute_sql("FROM sms SELECT *")
 
     def get_sms(self, filters):
         """
@@ -530,19 +605,19 @@ class DatabaseHandler(__BaseDatabaseHandler):
         :param filters: A dictionary of conditions to be met 
             key = field name, value is it's expected value
         """
-        return self.__filter('sms', filters)
+        return self.__filter(self.__table_names.get('Message'), filters)
 
     # No need to update a message. If need be, use self.__update_obj()
 
     def delete_message(self, id):
-        self.__delete_obj('sms', id)
+        self.__delete_obj(self.__table_names.get('Message'), id)
   
   # MMS sms
     def create_mms(self, data):
-        return self.__create_record('mms', data)
+        return self.__create_record(self.__table_names.get('MultiMediaMessage'), data)
     
     def get_mms(self, filters):
-        return self.__filter('mms', filters)
+        return self.__filter(self.__table_names.get('MultiMediaMessage'), filters)
     
     def delete_mms(self, new_data):
-        self.___delete_obj('mms', new_data)
+        self.___delete_obj(self.__table_names.get('MultiMediaMessage'), new_data)
