@@ -58,15 +58,15 @@ class Client:
                         msg.mark_as_read()
                         func(msg)
 
-    def auth_reset(self, sid=None, auto_rotate=False, method=None):
+    def auth_reset(self, sid=None, auto_rotating=False, method=None):
         """
         If auto rotating, print out something to show that it changed
 
         :optional param sid: String of the connect.sid cookie
-        :optional param auto_rotate: Indicates if auto rotating user sid
+        :optional param auto_rotating: Indicates if auto rotating user sid
         :optional param method: The method we're auto rotating from
         """
-        if auto_rotate:
+        if auto_rotating:
             print(
                 "\nconnect.sid for user", self.__user.username,
                 "has changed!\nOld sid:", self.__user.sid,
@@ -138,7 +138,7 @@ class Client:
             # Change user sid if it's changed
             new_sid = req.cookies['connect.sid']
             if new_sid != self.__user.sid:
-                self.auth_reset(sid=new_sid, auto_rotate=True, method="get_raw_messages() After GET request")
+                self.auth_reset(sid=new_sid, auto_rotating=True, method="get_raw_messages() After GET request")
             if str(req.status_code).startswith("2"):
                 messages = json.loads(req.content)
                 all_messages.append(messages["messages"])
@@ -192,7 +192,7 @@ class Client:
         cookie_sid = file_url_holder_req.cookies["connect.sid"]
         # Reassign to new sid
         if cookie_sid != self.__user.sid:
-            self.auth_reset(sid=cookie_sid, auto_rotate=True, method="send_mms() After GET request")
+            self.auth_reset(sid=cookie_sid, auto_rotating=True, method="send_mms() After GET request")
 
 
         if str(file_url_holder_req.status_code).startswith("2"):
@@ -216,7 +216,7 @@ class Client:
                 # Refresh the page after sending (Possibly not needed)
                 self.session.get(place_file_req.url)
                 if file_req_sid != self.__user.sid:
-                    self.auth_reset(sid=file_req_sid, auto_rotate=True, method="send_mms() After PUT request")
+                    self.auth_reset(sid=file_req_sid, auto_rotating=True, method="send_mms() After PUT request")
 
                 if str(place_file_req.status_code).startswith("2"):
 
@@ -260,7 +260,7 @@ class Client:
         # Check sid again
         new_sid = response.cookies['connect.sid']
         if new_sid != self._user_sid:
-            self.auth_reset(sid=new_sid, auto_rotate=True, method="send_sms() After POST request")
+            self.auth_reset(sid=new_sid, auto_rotating=True, method="send_sms() After POST request")
 
         if not str(response.status_code).startswith("2"):
             self.request_handler(response.status_code)
