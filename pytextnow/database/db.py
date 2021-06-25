@@ -88,7 +88,9 @@ class __BaseDatabaseHandler(object):
         safe_columns = f"({self.__clean_query(columns)})"
         # Gives back (?, ?, ?, ...)
         question_marks = f"({self.__clean_query(unsafe_params)})"
-        sql = f"INSERT INTO {table_name}{safe_columns} VALUES {question_marks}"
+        sql = "INSERT INTO %s %s VALUES %s;" % (
+            table_name, safe_columns, question_marks
+        )
         if return_mapped:
             return self.__execute_sql(sql, tuple(safe_values))
         self.__execute_sql(sql, tuple(safe_values))
@@ -132,7 +134,7 @@ class __BaseDatabaseHandler(object):
             # Nothing to do, exit
             return self.__close_connection()
         vals = self.__clean_query(vals)
-        sql = f'CREATE TABLE {table_name} '+ vals
+        sql = 'CREATE TABLE %s %s' % (table_name, vals)
         self.__execute_sql(sql, return_results=False)
 
     def __filter(
@@ -148,7 +150,7 @@ class __BaseDatabaseHandler(object):
         for column, value in filters.items():
             unsafe_filters += f"{column}={value}, "
         safe_filters = self.__clean_query(unsafe_filters)
-        sql = f"FROM {table_name} SELECT * WHERE "+safe_filters+";"
+        sql = "SELECT * FROM %s WHERE %s ;" % (table_name, safe_filters)
         return self.__execute_sql(sql)
 
     def __update_obj(self, table_name: str, new_data: typing.Dict[str, str]) -> None:
@@ -175,9 +177,9 @@ class __BaseDatabaseHandler(object):
             set_data+=f"{column} = ?, "
             ordered_values.append(value)
         set_data = self.__clean_query(set_data)
-        sql = f""" UPDATE {table_name}
-                SET {set_data}
-                WHERE id = {obj_id}"""
+        sql = """ UPDATE %s SET %s WHERE id = %s;""" % (
+            table_name, set_data, obj_id
+        )
 
         # Return 
         return self.__execute_sql(
@@ -247,7 +249,7 @@ class __BaseDatabaseHandler(object):
         :param id: The ID of the object to delete
         """
         self.__execute_sql(
-            f"DELETE FROM {table_name} WHERE id = {obj_id}",
+            "DELETE FROM %s WHERE id = %s;" % (table_name, obj_id),
             return_results=False, commit=True
         )
 
@@ -326,7 +328,7 @@ class __BaseDatabaseHandler(object):
             self.__create_table(table_name, col_info)
 
     def __table_exists(self, table_name: str) -> bool:
-        return len(self.__cursor.fetchall(f"FROM {table_name} SELECT *")) > 0
+        return len(self.__cursor.fetchall("SELECT * FROM %s;" % (table_name))) > 0
 
     def __clean_query(self, sql_string: str) -> str:
         if sql_string.endswith(", "):
@@ -556,7 +558,7 @@ class DatabaseHandler(__BaseDatabaseHandler):
 
     def get_all_contacts(self) -> Container:
         # returns results by default
-        return self.__execute_sql("SELECT * FROM contacts;")
+        return self.__execute_sql("SELECT * FROM %s;" % (self.__table_names.get('Contact')))
 
     def update_contact(
             self, info_dict,
@@ -593,7 +595,7 @@ class DatabaseHandler(__BaseDatabaseHandler):
         elif received:
             return self.__filter(self.__table_names.get('Message'), {'received': "True"})
         # Return both sent and received
-        return self.__execute_sql("FROM sms SELECT *")
+        return self.__execute_sql("SELECT * FROM %s;" % (self.__table_names.get("Message")))
 
     def get_sms(self, filters):
         """
@@ -616,6 +618,9 @@ class DatabaseHandler(__BaseDatabaseHandler):
     def create_mms(self, data):
         return self.__create_record(self.__table_names.get('MultiMediaMessage'), data)
     
+    def get_all_mms(self):
+        return self.__execute_sql("SELECT * FROM %s;" % (self.__table_names.get("MultiMediaMessage")))
+
     def get_mms(self, filters):
         return self.__filter(self.__table_names.get('MultiMediaMessage'), filters)
     
