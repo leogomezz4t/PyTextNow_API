@@ -1,4 +1,3 @@
-from pytextnow.database.objects import Results
 from pytextnow.TN_objects.contact import Contact
 from pytextnow.TN_objects.message import Message
 from pytextnow.TN_objects.container import Container
@@ -131,5 +130,4 @@ def login():
     print("\n")
     print("Open application tab and copy connect.sid cookie and paste it here.")
     sid = input("connect.sid: ")
-
     return sid

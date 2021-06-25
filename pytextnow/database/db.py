@@ -143,6 +143,12 @@ class __BaseDatabaseHandler(object):
         ) -> Container:
         """
         Filter a table based on the given parameters
+        
+        :param table_name: String name of the table to operate on
+        :param filters: Dictionary of key value pairs where keys are
+            fields and their values are the ones we will use to find
+            the desired records.
+        :return: Any TN_Object
         """
         # Using a filter with a trailing ", " causes an error
         # therefore it's unsafe until that's stripped off
@@ -153,7 +159,7 @@ class __BaseDatabaseHandler(object):
         sql = "SELECT * FROM %s WHERE %s ;" % (table_name, safe_filters)
         return self.__execute_sql(sql)
 
-    def __update_obj(self, table_name: str, new_data: typing.Dict[str, str]) -> None:
+    def __update_obj(self, table_name: str, obj_id: int, new_data: typing.Dict[str, str]) -> None:
         """
         Update an object
         
@@ -162,18 +168,9 @@ class __BaseDatabaseHandler(object):
         :return: project id
         """
         self.__validate_data(new_data)
-        obj_id = new_data.get('id', None)
-        if not obj_id:
-            raise Exception(
-                "You must pass the object id to update a record! "
-                "Location: db.py -> DatabaseHandler -> update_obj()"
-            )
         ordered_values = []
         set_data = ""
         for column, value in new_data.items():
-            # Save the id of the object and continue
-            if column == "id":
-                continue
             set_data+=f"{column} = ?, "
             ordered_values.append(value)
         set_data = self.__clean_query(set_data)
@@ -181,11 +178,23 @@ class __BaseDatabaseHandler(object):
             table_name, set_data, obj_id
         )
 
-        # Return 
-        return self.__execute_sql(
-            sql, tuple(ordered_values),
-            return_results=False
-        ).first()
+        # Return
+        # Fix for expected error where no user exists yet and auth_reset() is called
+        try:
+            return self.__execute_sql(
+                sql, tuple(ordered_values),
+                return_results=False
+            ).first()
+        except sqlite3.OperationalError:
+            return None
+        except Exception as e:
+            # 
+            print(
+                "\n\n!!!WARNING!!! Uncaught exception in __BasedatabaseHandler.__update_obj() "
+                "ERROR: ", e,
+                "\n\nReturning None...\n"
+            )
+            return None
 
     def __bulk_update(
             self,
@@ -342,7 +351,7 @@ class __BaseDatabaseHandler(object):
             values: str = None, return_id: bool = False,
             return_class: bool = False,
             return_raw: bool = False, return_results: bool = True,
-            commit: bool = False, dynamic_map: bool = True
+            commit: bool = False
         ):
         """
         A wrapper to execute any SQL. This is used to keep from
@@ -381,14 +390,16 @@ class __BaseDatabaseHandler(object):
                 return results
             elif return_results:
                 # Map results to Results object  if len > 1
-                result_dicts = self.__dict_factory(results)
                 try:
-                    if dynamic_map:
-                        return map_to_class(data_dicts=result_dicts, multple=True)
-                    return Container(result_dicts)
+                    return Container(
+                        map_to_class(
+                            self.__dict_factory(results),
+                            multple=True
+                        )
+                    )
                 except:
                     raise NotImplementedError(
-                        "Error handling for failed Result instantiation is not yet implemented!"
+                        "Error handling for failed Container instantiation is not yet implemented!"
                     )
             elif len(results) == 1:
                 return map_to_class(
@@ -509,7 +520,9 @@ class DatabaseHandler(__BaseDatabaseHandler):
                         "sid": "some sid"
                     }
 
-        :param data: Dictionary that holds data to insert
+        :param data: Dictionary whose keys are fields and values are
+            the values to insert into the corresponding columns
+        :return: User object
         """
         return self.__create_record(self.__table_names.get('User'), data)
 
@@ -518,28 +531,13 @@ class DatabaseHandler(__BaseDatabaseHandler):
         Get the sid from the USER_SID table that corresponds
         to the given username or, if it's the only sid that exists,
         return what we find.
-        
-        If no value, prompt for login OR raise exception.
-        """
-        results = self.__filter(self.__table_names.get('User'), {'username': username})
-        result_len = len(results)
-        if result_len > 1 and not username:
-            raise Exception(
-                                "There is more than one record in the user_sids table. "
-                                "Please provide a username and retry;"
-                                "Location: db.py -> DatabaseHandler -> get_user()"
-                            )
-        elif result_len > 1 and username:
-            # Returns {
-            #   'username': "Some Username",
-            #   'sid': "Some SID"
-            # }
-            return { key:value for (key,value) in results.items() if key == username}
-        elif result_len == 1:
-            return dict(results[0])
-        return None
 
-    def update_user(self, new_data: typing.Dict[str, str]) -> User:
+        :return: User object or None
+        """
+        # container of results
+        return self.__filter(self.__table_names.get('User'), {'username': username}).first()
+
+    def update_user(self, user_id, new_data: typing.Dict[str, str]) -> typing.Union[User, None]:
         """
         Update a user record in the database
 
@@ -547,8 +545,29 @@ class DatabaseHandler(__BaseDatabaseHandler):
             are the new values for the field.
             MUST contain a key 'id' with an integer value of an existing object
         """
-        return self.__update_obj(self.__table_names.get('User'), new_data)
+        return self.__update_obj(self.__table_names.get('User'), user_id, new_data)
 
+    def user_exists(
+            self, username: str = None,
+            sid: str = None, return_user: bool = False
+        ) -> typing.Union[bool, User]:
+        """
+        Return True/False if user exists in db
+        """
+        if not username and not sid:
+            raise Exception(
+                "To check if a user exists, pass either a username or sid "
+                "Location: db.py -> DatabaseHandler -> user_exists()"
+            )
+        field = "username" if username else "sid"
+        value = username or sid
+        results = self.__filter(
+                    self.__table_names.get('User'), {field: value}
+                )
+        if return_user:
+            return results.first()
+        return results > 0
+        
     def delete_user(self, id: int) -> None:
         self.__delete_obj(self.__table_names.get('User'), id)
 
@@ -562,16 +581,16 @@ class DatabaseHandler(__BaseDatabaseHandler):
 
     def update_contact(
             self, info_dict,
-            return_obj=True
+            contact_id, return_obj=True,
         ) -> typing.Union[None, Contact]:
         """
         :param info_dict: Dictionary with new information to update the record with
             MUST contain a key 'id' with an integer value of an existing object
         """
         if return_obj:
-            return self.__update_obj(self.__table_names.get('Contact'), info_dict)
+            return self.__update_obj(self.__table_names.get('Contact'), contact_id, info_dict)
         else:
-            self.__update_obj(self.__table_names.get('Contact'), info_dict)
+            self.__update_obj(self.__table_names.get('Contact'), contact_id, info_dict)
 
     def delete_contact(self):
         self.__delete_obj()

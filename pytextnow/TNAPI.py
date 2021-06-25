@@ -1,11 +1,12 @@
+from pytextnow.TN_objects.user import User
+from pytextnow.database.db import DatabaseHandler
 from pytextnow.tools.utils import login
+from pytextnow.tools.constants import *
 from pytextnow.TN_objects.error import FailedRequest, AuthError, InvalidEvent
 from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
 from pytextnow.TN_objects.message import Message
 from pytextnow.TN_objects.container import Container
 from pytextnow.TN_objects.contact import Contact
-from pytextnow.tools.constants import *
-
 import mimetypes
 import requests
 from datetime import datetime, time
@@ -18,52 +19,30 @@ import atexit
 
 
 class Client:
-    def __init__(self, username: str = None, cookie=None):
-        # Load SIDS
-        self._user_sid = {}
-        self._good_parse = False
-        self._user_sid_file = join(dirname(realpath(__file__)), 'user_sids.json')
-
-        try:
-            with open(self._user_sid_file, 'r') as file:
-                self._user_sid = json.loads(file.read())
-                self._good_parse = True
-        except json.decoder.JSONDecodeError:
-            with open(self._user_sid_file, 'w') as file:
-                file.write('{}')
-
-        self.username = username
+    def __init__(
+        # Make username required so sids are saved to db properly
+            self, username,
+            cookie=None, schema: str = None,
+            db_name="text_nowAPI.sqlite3"
+        ):
+        # Automatically creates database and tables.
+        # Give a schema to have a custom db layout
+        # Give a db_name to name the db what you want
+        self.db_handler = DatabaseHandler()
+        self.__user = User(
+            username=username,
+            sid=self.db_handler.get_user(username).sid or self.__login(username)
+        )
+        self.cookies = {
+            'connect.sid': self.__user.sid
+        }
         self.allowed_events = ["message"]
-
         self.events = []
-
-        if self.username in self._user_sid.keys():
-            sid = cookie if cookie else self._user_sid[self.username]
-            self.cookies = {
-                'connect.sid': sid
-            }
-            self._user_sid[self.username] = sid
-            if cookie and not self._good_parse:
-                with open(self._user_sid_file, "w") as file:
-                    file.write(json.dumps(self._user_sid))
-        else:
-            sid = cookie if cookie else login.login()
-            self.cookies = {
-                'connect.sid': sid
-            }
-            self._user_sid[self.username] = sid
-            with open(self._user_sid_file, "w") as file:
-                file.write(json.dumps(self._user_sid))
-
         self.headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/88.0.4324.104 Safari/537.36 '
         }
-
         self.session = requests.session()
-
-        file.close()
-
         atexit.register(self.on_exit)
 
     # Functions
@@ -79,29 +58,46 @@ class Client:
                         msg.mark_as_read()
                         func(msg)
 
-    def auth_reset(self, cookie=None):
-        with open(self._user_sid_file, "r") as user_SIDS_file:
-            user_SIDS = json.loads(user_SIDS_file.read())
+    def auth_reset(self, sid=None, auto_rotate=False, method=None):
+        """
+        If auto rotating, print out something to show that it changed
 
-        if self.username in user_SIDS.keys():
-            del user_SIDS[self.username]
-
-            with open(self._user_sid_file, "w") as user_SIDS_file:
-                user_SIDS_file.write(json.dumps(user_SIDS))
-
-            self.__init__(self.username, cookie)
+        :optional param sid: String of the connect.sid cookie
+        :optional param auto_rotate: Indicates if auto rotating user sid
+        :optional param method: The method we're auto rotating from
+        """
+        if auto_rotate:
+            print(
+                "\nconnect.sid for user", self.__user.username,
+                "has changed!\nOld sid:", self.__user.sid,
+                "\nNew sid:", sid,
+                f"\nLocation: TNAPI.py -> Client -> {method}"
+            )
+        if sid:
+            updated_user = self.db_handler.update_user(
+                self.__user.id, {'sid': sid}
+            # If the user doesn't exist in the db. Possibly catches obscure SymaticError
+            ) or self.__login(self.__user.username)
         else:
-            if cookie:
-                user_SIDS[self.username] = cookie
-                with open(self._user_sid_file, "w") as user_SIDS_file:
-                    user_SIDS_file.write(json.dumps(user_SIDS))
-                self.__init__(self.username)
-            else:
-                raise AuthError("You haven't authenticated before.")
+            updated_user = None
+        if not updated_user:
+            print("\n\nYou don't seem to have logged in before. Please do so now...\n\n")
+            # Give time to notice what what printed
+            time.sleep(1.3)
+            self.__user = self.__login(self.user.username)
+        self.cookies['connect.sid'] = self.__user.sid
+        print("User sid successfully updated and cookie is set. Returning...")
+        self.__user = updated_user
+        return
 
     def get_raw_contacts(self):
         """
         Gets all textnow contacts
+
+        TODO: Start worker to check if contacts are not in db
+            if not, create them. Possibly even get the length of
+            contacts, split the length between workers then start
+            processes to get them all asynchronously (possible db lock error)
         """
         params = (
             ('page_size', '50'),
@@ -111,33 +107,38 @@ class Client:
         return contacts["result"]
 
     def get_contacts(self):
-        raw_contacts = self.get_raw_contacts()
-        contact_list = [Contact(contact, self) for contact in raw_contacts]
-        contacts = Container(contact_list)
-        return contacts
+        return Container(
+            [Contact(contact, self) for contact in self.get_raw_contacts()]
+        )
 
     def get_messages(self):
         """
             This gets most of the messages both sent and received. However It won't get all of them just the past 10-15
         """
-        message_list = [Message(msg, self) if msg["type"] == MESSAGE_TYPE else MultiMediaMessage(msg, self) for msg in
-                        self.get_raw_messages()]
-        messages = Container(message_list)
-        return messages
+        return Container(
+            [
+                Message(msg, self)\
+                if msg["type"] == MESSAGE_TYPE\
+                else MultiMediaMessage(msg, self)\
+                    for msg in self.get_raw_messages()
+            ]
+        )
 
     def get_raw_messages(self):
         """
             This gets most of the messages both sent and received. It takes about 30 seconds though
         """
         all_messages = []
+        # Loop contacts
         for contact in self.get_contacts():
+            # Send get for 200 contacts per page
             req = self.session.get(
                 "https://www.textnow.com/api/users/" + self.username + f"/messages?contact_value={contact.number}&start_message_id=99999999999999&direction=past&page_size=200&get_archived=1",
                 headers=self.headers, cookies=self.cookies)
-            self.session.get(req.url)
-            if req.cookies['connect.sid'] != self._user_sid:
-                print(req.cookies["connect.sid"])
-                self._user_sid = req.cookies["connect.sid"]
+            # Change user sid if it's changed
+            new_sid = req.cookies['connect.sid']
+            if new_sid != self.__user.sid:
+                self.auth_reset(sid=new_sid, auto_rotate=True, method="get_raw_messages() After GET request")
             if str(req.status_code).startswith("2"):
                 messages = json.loads(req.content)
                 all_messages.append(messages["messages"])
@@ -149,37 +150,33 @@ class Client:
         """
             This gets all the past 10-15 messages sent by your account
         """
-        sent_messages = self.get_messages()
-        sent_messages = [msg for msg in sent_messages if msg.direction == SENT_MESSAGE_TYPE]
-
-        return Container(sent_messages)
+        return Container(
+            [msg for msg in self.get_messages() if msg.direction == SENT_MESSAGE_TYPE]
+        )
 
     def get_received_messages(self):
         """
             Gets inbound messages
         """
-        messages = self.get_messages()
-        messages = [msg for msg in messages if msg.direction == RECEIVED_MESSAGE_TYPE]
-
-        return Container(messages)
+        return Container(
+            [msg for msg in self.get_messages() if msg.direction == RECEIVED_MESSAGE_TYPE]
+        )
 
     def get_unread_messages(self):
         """
             Gets unread messages
         """
-        new_messages = self.get_received_messages()
-        new_messages = [msg for msg in new_messages if not msg.read]
-
-        return Container(new_messages)
+        return Container(
+            [msg for msg in self.get_received_messages() if not msg.read]
+        )
 
     def get_read_messages(self):
         """
             Gets read messages
         """
-        new_messages = self.get_received_messages()
-        new_messages = [msg for msg in new_messages if msg.read]
-
-        return Container(new_messages)
+        return Container(
+            [msg for msg in self.get_received_messages() if msg.read]
+        )
 
     def send_mms(self, to, file):
         """
@@ -192,9 +189,12 @@ class Client:
 
         file_url_holder_req = self.session.get("https://www.textnow.com/api/v3/attachment_url?message_type=2",
                                                cookies=self.cookies, headers=self.headers)
-        if file_url_holder_req.cookies['connect.sid'] != self._user_sid:
-            print(file_url_holder_req.cookies["connect.sid"])
-            self._user_sid = file_url_holder_req.cookies["connect.sid"]
+        cookie_sid = file_url_holder_req.cookies["connect.sid"]
+        # Reassign to new sid
+        if cookie_sid != self.__user.sid:
+            self.auth_reset(sid=cookie_sid, auto_rotate=True, method="send_mms() After GET request")
+
+
         if str(file_url_holder_req.status_code).startswith("2"):
             file_url_holder = json.loads(file_url_holder_req.text)["result"]
 
@@ -212,11 +212,12 @@ class Client:
 
                 place_file_req = self.session.put(file_url_holder, data=raw, headers=headers_place_file,
                                                   cookies=self.cookies)
-
+                file_req_sid = place_file_req.cookies['connect.sid']
+                # Refresh the page after sending (Possibly not needed)
                 self.session.get(place_file_req.url)
-                if place_file_req.cookies['connect.sid'] != self._user_sid:
-                    print(place_file_req.cookies["connect.sid"])
-                    self._user_sid = place_file_req.cookies["connect.sid"]
+                if file_req_sid != self.__user.sid:
+                    self.auth_reset(sid=file_req_sid, auto_rotate=True, method="send_mms() After PUT request")
+
                 if str(place_file_req.status_code).startswith("2"):
 
                     json_data = {
@@ -254,10 +255,13 @@ class Client:
 
         response = self.session.post('https://www.textnow.com/api/users/' + self.username + '/messages',
                                      headers=self.headers, cookies=self.cookies, data=data)
+        # Refresh after post
         self.session.get(response.url)
-        if response.cookies['connect.sid'] != self._user_sid:
-            print(response.cookies["connect.sid"])
-            self._user_sid = response.cookies["connect.sid"]
+        # Check sid again
+        new_sid = response.cookies['connect.sid']
+        if new_sid != self._user_sid:
+            self.auth_reset(sid=new_sid, auto_rotate=True, method="send_sms() After POST request")
+
         if not str(response.status_code).startswith("2"):
             self.request_handler(response.status_code)
         return response
@@ -296,3 +300,17 @@ class Client:
     def request_handler(self, status_code: int):
         status_code = str(status_code)
         raise FailedRequest(status_code)
+
+
+    def __login(self, username):
+        """
+        Wrap the call to login to save the sid/username
+        to the database on login completion
+        """
+        sid = login()
+        user = self.db_handler.user_exists(
+                username=self.username, return_user=True
+            ) or None
+        if user:
+            return self.db_handler.update_user({'id': user.id,'sid': sid})
+        return self.db_handler.create_user({'username': username, 'sid': sid})
