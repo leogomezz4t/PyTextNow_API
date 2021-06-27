@@ -1,4 +1,10 @@
-from tools.utils import str_to_date
+import datetime
+def str_to_date(string):
+    """
+    Convert a string into a datetime object
+    """
+    # This may not work
+    return datetime.datetime.strptime(string)
 
 class Container(list):
     def __init__(self, item_list: list):
@@ -6,9 +12,7 @@ class Container(list):
         self.item_list = item_list
 
     def __str__(self):
-        ss = [item.__str__() for item in self.item_list]
-        s = '[' + "\n".join(ss) + ']'
-        return s
+        return str(self.item_list)
 
     def filter(self, **kwargs):
         filtered_list = []
@@ -39,4 +43,7 @@ class Container(list):
             return self
 
     def first(self):
+        """
+        Returns the first object in the list
+        """
         return None if len(self.item_list) == 0 else self.item_list[0]

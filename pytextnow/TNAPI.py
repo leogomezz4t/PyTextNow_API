@@ -1,12 +1,14 @@
-from pytextnow.TN_objects.user import User
 from pytextnow.database.db import DatabaseHandler
+from pytextnow.TN_objects.user import User
 from pytextnow.tools.utils import login
 from pytextnow.tools.constants import *
+
 from pytextnow.TN_objects.error import FailedRequest, AuthError, InvalidEvent
 from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
 from pytextnow.TN_objects.message import Message
 from pytextnow.TN_objects.container import Container
 from pytextnow.TN_objects.contact import Contact
+from pytextnow.tools.events import EventManager
 import mimetypes
 import requests
 from datetime import datetime, time
@@ -25,10 +27,7 @@ class Client:
             cookie=None, schema: str = None,
             db_name="text_nowAPI.sqlite3"
         ):
-        # Automatically creates database and tables.
-        # Give a schema to have a custom db layout
-        # Give a db_name to name the db what you want
-        self.db_handler = DatabaseHandler()
+        self.db_handler = DatabaseHandler(schema=schema, db_name=db_name)
         self.__user = User(
             username=username,
             sid=self.db_handler.get_user(username).sid or self.__login(username)
@@ -36,8 +35,8 @@ class Client:
         self.cookies = {
             'connect.sid': self.__user.sid
         }
-        self.allowed_events = ["message"]
-        self.events = []
+        self.events = EventManager()
+        self.allowed_events = self.events.registered_events
         self.headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/88.0.4324.104 Safari/537.36 '
@@ -48,6 +47,8 @@ class Client:
     # Functions
     def on_exit(self):
         if len(self.events) == 0:
+            #if self.thread_manager.has_active():
+                #self.thread_manager.stop()
             return
 
         while 1:
@@ -57,6 +58,7 @@ class Client:
                     for msg in unread_msgs:
                         msg.mark_as_read()
                         func(msg)
+
 
     def auth_reset(self, sid=None, auto_rotating=False, method=None):
         """
@@ -240,6 +242,7 @@ class Client:
         else:
             self.request_handler(file_url_holder_req.status_code)
 
+
     def send_sms(self, to, text):
         """
             Sends an sms text message to this number
@@ -300,7 +303,6 @@ class Client:
     def request_handler(self, status_code: int):
         status_code = str(status_code)
         raise FailedRequest(status_code)
-
 
     def __login(self, username):
         """

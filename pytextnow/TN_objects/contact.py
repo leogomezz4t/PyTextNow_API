@@ -5,8 +5,9 @@ import json
 
 
 class Contact:
-    def __init__(self, raw_obj, client):
+    def __init__(self, raw_obj, client, db_id=None):
         self.raw_obj = raw_obj
+        self.db_id = db_id
         self.client = client
         self.number = self.raw_obj["contact_value"]
         self.name = self.raw_obj["name"]

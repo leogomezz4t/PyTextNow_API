@@ -10,21 +10,21 @@ MESSAGE_TYPE = 0
 
 
 class Message:
-    def __init__(self, msg_obj, client):
+    def __init__(self, msg_obj, client, db_id=None):
         self.content = msg_obj["message"]
         self.number = msg_obj["contact_value"]
-        self.date = datetime.fromisoformat(msg_obj["date"].replace("Z", "+00:00"))
+        self.date = datetime.fromisoformat(msg_obj["date"])
         self.first_contact = msg_obj["conversation_filtering"]["first_time_contact"]
         self.type = MESSAGE_TYPE
         self.read = msg_obj["read"]
         self.id = msg_obj["id"]
+        self.db_id = db_id
         self.direction = msg_obj["message_direction"]
         self.raw = msg_obj
         self.client = client
 
     def __str__(self):
-        class_name = self.__class__.__name__
-        s = f"<{class_name} number: {self.number}, content: {self.content}>"
+        s = f"<{self.__class__.__name__} number: {self.number}, content: {self.content}>"
         return s
 
     def send_mms(self, file):

@@ -1,11 +1,12 @@
-from pytextnow.TN_objects.message import Message
+from .message import Message
 
 MULTIMEDIA_MESSAGE_TYPE = 1
 
 
 class MultiMediaMessage(Message):
-    def __init__(self, msg_obj, client):
+    def __init__(self, msg_obj, client, db_id=None):
         super().__init__(msg_obj, client)
+        self.db_id = db_id
         file_req = self.client.session.get(self.content)
         self.raw_data = file_req.content
         self.content_type = file_req.headers["Content-Type"]
