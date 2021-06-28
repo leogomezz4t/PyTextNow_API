@@ -27,11 +27,13 @@ TABLE_ATTRS = {
                     'date',
                     'first_contact',
                     'read',
+                    'id',
+                    'direction',
                     'sent',
                     'received',
-                    'direction',
-                    'object_type'
-                'db_id'
+                    # For easy mapping
+                    'object_type',
+                    'db_id'
             ],
             "MultiMediaMessage": [
                     'content',
@@ -39,6 +41,7 @@ TABLE_ATTRS = {
                     'date',
                     'first_contact',
                     'read',
+                    'id',
                     #'sent',
                     #'received',
                     'direction',

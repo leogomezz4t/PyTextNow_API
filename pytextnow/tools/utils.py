@@ -5,11 +5,13 @@ from TN_objects.container import Container
 from TN_objects.multi_media_message import MultiMediaMessage
 from TN_objects.user import User
 from tools.constants import *
-import datetime
 
 
 def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False):
     """
+    !!!WARNING!! There is a possible error here where, if you pass only
+    one dictionary and leave multiple=False you'll ge
+
     Take in a dictionary and match the information inside of it to
     an object then loop the keys/values (attributes and values),
     set the objects attributes and return it
@@ -20,7 +22,7 @@ def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False)
             "multiple=True and a list of data dictionaries "
             "Location: tools -> utils.py -> map_to_class()"
         )
-
+    print("Entering 'map_it' method!!")
     def __map_it(data_dict):
         objects = {
             MESSAGE_TYPE: Message,
@@ -28,56 +30,40 @@ def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False)
             USER_TYPE: User,
             CONTACT_TYPE: Contact
         }
-
         mapped_obj = None
         # The easy way...there's an object type :)
         if "object_type" in data_dict.keys():
-            obj = objects.get(data_dict['object_type'])
+
+            obj = objects.get(data_dict['object_type'])(from_db=True, **data_dict)
             for attr, value in data_dict.items():
                 # Set the attr if it exists
-                if attr in TABLE_ATTRS.get(obj.__name__):
+                if attr in TABLE_ATTRS.get(obj.__class__.__name__):
                     setattr(obj, attr, value)
                 # Warn the developer and continue trying to map attrs
                 else:
                     # Mainly a debug
                     print(
-                        f"WARNING: Object of type {obj.__name__} "
+                        f"WARNING: Object of type {obj.__class__.__name__} "
                         f"does not have the attribute {attr}. There may be "
                         "missing information in your class!!"
                         "\n\n!!!Disregard if updating a record or inserting an incomplete record!!!"
                     )
-
             return obj
-
-            # 
         # Find the object we must map to
-        # FIX ME - SymanticError("
-        # # {'name': "Trippy"}
-        # {'name': "", 'number': ""}
-        # We have a name so does the other dict - assign current to mapped_obj
-        # We don't have name, don't assign and move on")
-        for obj in objects.values():
-            for attr in TABLE_ATTRS.get(obj.__name__):
-                # Mismatched attributes, go to the next object
-                for data_attr in data_dict.keys():
-                    if data_attr != attr:
-                        mapped_obj = None
-                        continue
-                else:
-                    # Don't reassign for no reason
-                    if not mapped_obj:
-                        mapped_obj = obj
-            # There was a mismatched attribute, go to the next object
-            if not mapped_obj:
-                continue
+        if 'content' in list(data_dict.keys()) and 'extension' not in list(data_dict.keys()):
+            mapped_obj = objects.get(MESSAGE_TYPE)
+        elif 'extension' in list(data_dict.keys()):
+            mapped_obj = objects.get(MULTIMEDIA_MESSAGE_TYPE)
+        elif 'name' in list(data_dict.keys()):
+            mapped_obj = objects.get(CONTACT_TYPE)
+        elif 'sid' in list(data_dict.keys()) or 'username' in list(data_dict.keys()):
+            mapped_obj = objects.get(USER_TYPE)
+        
         if not mapped_obj:
             raise Exception(
                 f"Failed to find object with one or more of the following attributes: {data_dict.keys()} "
                 "Location: tools -> utils.py -> map_to_class() -> __map_it()"
             )
-        # Actually map the object
-        for attr, value in data_dict.items():
-            setattr(mapped_obj, attr, value)
         return mapped_obj
 
     if multiple:

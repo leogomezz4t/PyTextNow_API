@@ -4,7 +4,7 @@ from TN_objects.message import Message
 from TN_objects.multi_media_message import MultiMediaMessage
 from TN_objects.contact import Contact
 from TN_objects.user import User
-from tools.constants import TABLES_CLASSES
+from tools.constants import *
 from tools.utils import map_to_class
 
 import sqlite3
@@ -31,7 +31,8 @@ class BaseDatabaseHandler(object):
                 'db_id': "INTEGER", # Common
                 'sent': "TEXT", # Common
                 'received': "TEXT", # Common
-                'direction': "INTEGER", # Common
+                'direction': "INTEGER", # Common,
+                'id': "TEXT",
                 # Integer because of constants
                 "object_type": "INTEGER" # 1 # Common
             },
@@ -46,6 +47,7 @@ class BaseDatabaseHandler(object):
                 'content_type': "TEXT", # UNCOMMON
                 'extension': "TEXT", # UNCOMMON
                 'type': "INTEGER",
+                'id': "TEXT",
                 "object_type": "INTEGER" # 2
             },
             "users": {
@@ -62,11 +64,7 @@ class BaseDatabaseHandler(object):
             },
         }
         self.__tables = schema if schema else self.__default_tables
-        print("Creating Tables...")
-        time.sleep(1)
         self.__create_tables()
-        print("Assigning table names...")
-        time.sleep(1)
         self.__table_names = self.__assign_table_names()
 
     def _create_record(
@@ -80,7 +78,7 @@ class BaseDatabaseHandler(object):
                 "because they are automatically created! "
                 "Location: db.py -> DatabaseHandler -> create_record()"
             )
-        self.__validate_data(info)
+        self.__validate_data(table_name, info)
         columns = ""
         safe_values = []
         for column, value in info.items():
@@ -94,9 +92,8 @@ class BaseDatabaseHandler(object):
         sql = "INSERT INTO %s (%s) VALUES %s;" % (
             table_name, safe_columns, tuple(safe_values)
         )
-        print("SQL:", sql)
         if return_mapped:
-            return self._execute_sql(sql, commit=True)
+            return self._execute_sql(sql, commit=True, return_results=True)
         self._execute_sql(sql, commit=True)
 
     def filter(
@@ -118,11 +115,12 @@ class BaseDatabaseHandler(object):
         for column, value in filters.items():
             unsafe_filters += f"{column}='{value}', "
         safe_filters = self.__clean_query(unsafe_filters)
-        sql = "SELECT * FROM %s WHERE %s ;" % (table_name, safe_filters)
-        print("FILTER SQL:", sql)
+        sql = """SELECT * 
+        FROM %s 
+        WHERE %s;""" % (table_name, safe_filters)
         return self._execute_sql(sql, return_results=True)
 
-    def __update_obj(self, table_name: str, db_id: int, new_data: typing.Dict[str, str], return_obj=False) -> None:
+    def _update_obj(self, table_name: str, db_id: int, new_data: typing.Dict[str, str], return_obj=True) -> None:
         """
         Update an object
         
@@ -130,34 +128,52 @@ class BaseDatabaseHandler(object):
         :param new_data: Dict where keys are columns and values are their new values
         :return: db_id
         """
-        self.__validate_data(new_data)
+
+        self.__validate_data(table_name, new_data)
         ordered_values = []
         set_data = ""
         for column, value in new_data.items():
-            set_data+=f"{column} = ?, "
-            ordered_values.append("'"+value+"'")
+            set_data+=f"{column} = '{value}' "
         set_data = self.__clean_query(set_data)
-        sql = """ UPDATE %s SET %s WHERE db_id = %s;""" % (
+        sql = """ UPDATE %s
+        SET %s
+        WHERE db_id = %s;""" % (
             table_name, set_data, db_id
         )
-
-        # Return
-        # Fix for expected error where no user exists yet and auth_reset() is called
-        try:
-            return self._execute_sql(
-                sql, tuple(ordered_values),
-                return_results=return_obj
-            ).first()
-        except sqlite3.OperationalError:
-            return None
-        except Exception as e:
-            # 
-            print(
-                "\n\n!!!WARNING!!! Uncaught exception in __BasedatabaseHandler.__update_obj() "
-                "ERROR: ", e,
-                "\n\nReturning None...\n"
+        
+        if return_obj:
+            # Update the record
+            self._execute_sql(
+                    sql, tuple(ordered_values)
+                )
+            # Get the updated record and try to return the result
+            result = self._execute_sql(
+                f"""
+                SELECT *
+                FROM {table_name}
+                WHERE db_id = {db_id};
+                """, return_results=True
             )
-            return None
+            try:
+                return result[0]
+            except sqlite3.OperationalError:
+                return None
+            except IndexError:
+                return None
+            except Exception as e:
+                # 
+                print(
+                    "\n\n!!!WARNING!!! Uncaught exception in __BasedatabaseHandler._update_obj() "
+                    "ERROR: ", e,
+                    "\n\nReturning None...\n"
+                )
+                return None
+        # Update the record
+        self._execute_sql(
+                    sql, tuple(ordered_values),
+                    return_results=False
+                )
+
 
     def __bulk_update(
             self,
@@ -181,7 +197,7 @@ class BaseDatabaseHandler(object):
         # Each table gets its own update statement
         for table_name, data in table_data.items():
             # Validation
-            self.__validate_data(data)
+            self.__validate_data(table_name, data)
             db_id = data.get('db_id', None)
             if not db_id:
                 raise Exception(
@@ -202,10 +218,10 @@ class BaseDatabaseHandler(object):
             # UPDATE user_sids SET username = some_username, sid = some_sid WHERE id = 2;
             # Execute the query
             results.append(self._execute_sql(
-                base_query
-                +clean_set_clause
-                +where_clause
-                +";",
+                f"""{base_query}
+                {clean_set_clause}
+                {where_clause}
+                ;""",
                 tuple(set_data),
                 commit=True,
                 return_results=return_objs
@@ -213,7 +229,7 @@ class BaseDatabaseHandler(object):
         if return_objs:
             return Container(results)
 
-    def __delete_obj(self, table_name: str, db_id: int) -> None:
+    def _delete_obj(self, table_name: str, db_id: int) -> None:
         """
         Delete an object
 
@@ -221,7 +237,7 @@ class BaseDatabaseHandler(object):
         :param db_id: The DB_ID of the object to delete
         """
         self._execute_sql(
-            "DELETE FROM %s WHERE db_id = %s;" % (table_name, db_id),
+            f'DELETE FROM {table_name} WHERE db_id={db_id}',
             return_results=False, commit=True
         )
 
@@ -234,7 +250,6 @@ class BaseDatabaseHandler(object):
         """
         Dynamically create a table based on the values given
         """
-        print("creating table ", table_name)
         # Add the table information to self.__tables for insert/update validation
         self.__tables[table_name] = info
         # Build the values of the table
@@ -261,14 +276,12 @@ class BaseDatabaseHandler(object):
                 vals += f"{column} {col_type} NOT NULL UNIQUE, "
                 continue
             vals += f"{column} {col_type}, "
-            print("\n\n", vals, "\n\n")
         vals = self.__clean_query(vals)
         vals += ")"
         # If all the tables already exist, stripping out the ()
         # should leave the vals variable with a length of 0
         if len(vals.strip("(").strip(")")) == 0:
             # Nothing to do, exit
-            print("Not executing, vals are None")
             return
         sql = 'CREATE TABLE %s %s' % (table_name, vals)
         self._execute_sql(sql, return_results=False, commit=True)
@@ -306,7 +319,6 @@ class BaseDatabaseHandler(object):
             results = self._execute_sql("SELECT * FROM %s;" % (table_name), return_results=True)
             return True
         except sqlite3.OperationalError:
-            print("NO TABLE YET")
             return False
         except Exception as e:
             raise Exception(f"FAILED to see if table exists {e}")
@@ -344,7 +356,7 @@ class BaseDatabaseHandler(object):
         :param return_raw: If True, return the raw data returned from the database operation
         """
         try:
-            print(sql)
+            print("\n\nSQL COMMAND:", sql, "\n\n")
             # If we're not commiting, we want the results for sure
             if values:
                 results = self.__cursor.execute(sql, values)
@@ -352,27 +364,20 @@ class BaseDatabaseHandler(object):
                 # Assume we're getting something. No harm if not
                 results = self.__cursor.execute(sql)
             dicts = self.__dict_factory(results)
-            import json
-            print(json.dumps(dicts, indent=4))
             if commit:
                 self.__database.commit()
             elif not return_results:
-                print("Returning no results...")
                 return
             elif return_id:
-                print("Returning ID...")
                 return self.__cursor.lastrowid
             elif return_class:
-                print("Returning class...")
                 return map_to_class(results)[0].__class__
             elif return_raw:
-                print("Returning Raw....")
                 return results
             elif len(dicts) == 0:
-                print("Len of dicts is 0...")
+                print("Empty results")
                 return dicts
             elif return_results:
-                print("Returning results in container...")
                 # Map results to Results object  if len > 1
                 return Container(
                         map_to_class(
@@ -390,7 +395,7 @@ class BaseDatabaseHandler(object):
             )
 
     def __validate_data(
-            self, data: typing.Dict[str, typing.Dict[str, str]]
+            self, table_name, data: typing.Dict[str, typing.Dict[str, str]]
         ) -> None:
         """
         Ensure we have the correct data in the correct format
@@ -402,14 +407,18 @@ class BaseDatabaseHandler(object):
             "INTEGER": int
             #"BOOLEAN": bool <-- Requires custom db type
         }
-        try:
-            import json
-            # Handles missing attributes in the case of updates/inserts with nullable fields
-            # Won't allow data with no corresponding field in any table
-            print(json.dumps(data, indent=4))
-            cls_name = map_to_class(data).__name__
-        except Exception as e:
-            raise Exception(f"{e}")
+        cls_name = TABLES_CLASSES.get(table_name)
+        if data.get('date'):
+            data['date'] = str(data['date'])
+        invalid_fields = {}
+        for field in data.keys():
+            if field not in TABLE_ATTRS.get(cls_name):
+                invalid_field = invalid_fields.get(field, None)
+                if not invalid_field:
+                    invalid_fields[field] = f"Attribute {field} is not defined in table {table_name} attributes"
+                else:
+                    invalid_fields[field].append(f"Attribute {field} is not defined in table {table_name} attributes")
+            #obj = map_to_class(data_dicts=[data], multiple=True).first()
         # Validate the data types
         # get schema for table
         for field, field_type in self.__tables.get(self.get_table_name(cls_name)).items():
@@ -417,15 +426,25 @@ class BaseDatabaseHandler(object):
                 # Attempt to cast the data to the type its field requires
                 f_type = col_types.get(field_type)(data.get(field))
             except:
+                invalid_field = invalid_fields.get(field)
                 if type(data.get(field)) == type(None):
                     # Null values...
                     continue
-                # Failed to cast, cannot accept incompatible data
-                raise Exception(
-                    f'INVALID DATA: The column "{field}" requires type '
-                    f'{field_type} but got {type(data.get(field))} instead '
+                error = f'INVALID DATA: The column "{field}" requires type '\
+                    f'{field_type} but got {type(data.get(field))} instead '\
                     'Location: db.py -> __DatabaseHandler -> __validate_data()'
-                )
+                # Failed to cast, cannot accept incompatible data
+                if invalid_field:
+                    invalid_fields[field].append(error)
+                else:
+                    invalid_fields[field] = [error]
+        if len(list(invalid_fields.keys())):
+            print("\n\n!!!ERROR INVALID DATA!!!\n")
+            for field, err in invalid_fields.items():
+                print("Showing errors for field: ", field)
+                print(err)
+            quit()
+        return True
 
     def __dict_factory(
             self, results: typing.List[sqlite3.Row]
@@ -486,6 +505,7 @@ class DatabaseHandler(BaseDatabaseHandler):
   # Usernames & SID
     def get_all_users(self):
         return self._execute_sql("SELECT * FROM users;", return_results=True)
+
     def create_user(self, data: typing.Dict[str, str]) -> User:
         """
         Take in a dictionary where the keys are the fields
@@ -522,7 +542,7 @@ class DatabaseHandler(BaseDatabaseHandler):
             are the new values for the field.
             MUST contain a key 'db_id' with an integer value of an existing object
         """
-        return self.__update_obj(self.get_table_name('User'), db_id, new_data)
+        return self._update_obj(self.get_table_name('User'), db_id, new_data)
 
     def user_exists(
             self, username: str = None,
@@ -531,22 +551,22 @@ class DatabaseHandler(BaseDatabaseHandler):
         """
         Return True/False if user exists in db
         """
+        # Figure out which field was provided
         if not username and not sid:
             raise Exception(
                 "To check if a user exists, pass either a username or sid "
                 "Location: db.py -> DatabaseHandler -> user_exists()"
             )
+        # Assign the field
         field = "username" if username else "sid"
-        print("Table Name:", self.get_table_name('User'))
         value = username or sid
         results = self.filter(
                     self.get_table_name('User'), {field: value}
                 )
-        print("\n\nUser Exists Query Results:", results.first())
-        return isinstance(results.first(), User.__class__)
+        return len(results) > 0
         
     def delete_user(self, db_id: int) -> None:
-        self.__delete_obj(self.get_table_name('User'), db_id)
+        self._delete_obj(self.get_table_name('User'), db_id)
 
   # Contacts
     def contact_exists(
@@ -562,13 +582,11 @@ class DatabaseHandler(BaseDatabaseHandler):
                 "Location: db.py -> DatabaseHandler -> contact_exists()"
             )
         field = "name" if name else "number"
-        print("Table Name:", self.get_table_name('Contact'))
         value = name or number
         results = self.filter(
                     self.get_table_name('Contact'), {field: value}
                 )
-        print("\n\nContact Exists Query Results:", results.first())
-        return isinstance(results.first(), Contact.__class__)
+        return isinstance(results[0], Contact.__class__)
 
     def create_contact(self, data: typing.Dict[str, str]) -> Contact:
         self._create_record(self.get_table_name('Contact'), data)
@@ -586,12 +604,12 @@ class DatabaseHandler(BaseDatabaseHandler):
             MUST contain a key 'db_id' with an integer value of an existing object
         """
         if return_obj:
-            return self.__update_obj(self.get_table_name('Contact'), db_id, info_dict)
+            return self._update_obj(self.get_table_name('Contact'), db_id, info_dict, return_obj=True)
         else:
-            self.__update_obj(self.get_table_name('Contact'), db_id, info_dict)
+            self._update_obj(self.get_table_name('Contact'), db_id, info_dict)
 
     def delete_contact(self, db_id):
-        self.__delete_obj(self.get_table_name("User"), db_id)
+        self._delete_obj(self.get_table_name("Contact"), db_id)
   # SMS
 
     def create_sms(self, data):
@@ -626,10 +644,10 @@ class DatabaseHandler(BaseDatabaseHandler):
         """
         return self.filter(self.get_table_name('Message'), filters)
 
-    # No need to update a message. If need be, use self.__update_obj()
+    # No need to update a message. If need be, use self._update_obj()
 
-    def delete_message(self, db_id):
-        self.__delete_obj(self.get_table_name('Message'), db_id)
+    def delete_sms(self, db_id):
+        self._delete_obj(self.get_table_name('Message'), db_id)
   
   # MMS sms
     def create_mms(self, data):
@@ -642,4 +660,4 @@ class DatabaseHandler(BaseDatabaseHandler):
         return self.filter(self.get_table_name('MultiMediaMessage'), filters)
     
     def delete_mms(self, db_id):
-        self.__delete_obj(self.get_table_name('MultiMediaMessage'), db_id)
+        self._delete_obj(self.get_table_name('MultiMediaMessage'), db_id)
