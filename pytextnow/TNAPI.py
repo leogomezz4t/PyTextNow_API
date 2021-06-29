@@ -44,18 +44,19 @@ class Client:
 
     # Functions
     def on_exit(self):
-        if len(self.events) == 0:
-            # if self.thread_manager.has_active():
-            # self.thread_manager.stop()
-            return
-
-        while 1:
-            for event, func in self.events:
-                if event == "message":
-                    unread_msgs = self.get_unread_messages()
-                    for msg in unread_msgs:
-                        msg.mark_as_read()
-                        func(msg)
+        pass
+        # if len(self.events) == 0:
+        #     # if self.thread_manager.has_active():
+        #     # self.thread_manager.stop()
+        #     return
+        #
+        # while 1:
+        #     for event, func in self.events:
+        #         if event == "message":
+        #             unread_msgs = self.get_unread_messages()
+        #             for msg in unread_msgs:
+        #                 msg.mark_as_read()
+        #                 func(msg)
 
     def auth_reset(self, sid=None, auto_rotating=False, method=None):
         """
