@@ -23,6 +23,7 @@ def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False)
             "Location: tools -> utils.py -> map_to_class()"
         )
     print("Entering 'map_it' method!!")
+
     def __map_it(data_dict):
         objects = {
             MESSAGE_TYPE: Message,
@@ -58,7 +59,7 @@ def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False)
             mapped_obj = objects.get(CONTACT_TYPE)
         elif 'sid' in list(data_dict.keys()) or 'username' in list(data_dict.keys()):
             mapped_obj = objects.get(USER_TYPE)
-        
+
         if not mapped_obj:
             raise Exception(
                 f"Failed to find object with one or more of the following attributes: {data_dict.keys()} "
@@ -84,6 +85,7 @@ def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False)
             )
     return __map_it(data_dict)
 
+
 def serialize(obj):
     """
     Syntactic sugar for turning a classes attributes into
@@ -91,11 +93,13 @@ def serialize(obj):
     """
     return obj.__dict__.items()
 
+
 def date_to_str(dt_time):
     """
     Convert a date time object into a string
     """
     return 10000 * dt_time.year + 100 * dt_time.month + dt_time.day
+
 
 def login():
     print("Go to https://www.textnow.com/messaging and open developer tools")

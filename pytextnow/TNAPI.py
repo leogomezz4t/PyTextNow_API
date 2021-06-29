@@ -1,28 +1,30 @@
-from pytextnow.database.db import DatabaseHandler
-from pytextnow.TN_objects.user import User
-from pytextnow.tools.utils import login
-from pytextnow.tools.constants import *
-
-from pytextnow.TN_objects.error import FailedRequest, AuthError, InvalidEvent
-from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
-from pytextnow.TN_objects.message import Message
-from pytextnow.TN_objects.container import Container
-from pytextnow.TN_objects.contact import Contact
-from pytextnow.tools.events import EventManager
-import mimetypes
-import requests
-from datetime import datetime, time
-import datetime as dt
-
-import json
-from os.path import realpath, dirname, join
-import time
 import atexit
+import datetime as dt
+import json
+import mimetypes
+import time
+from datetime import datetime, time
+
+import requests
+
+from pytextnow.TN_objects.contact import Contact
+from pytextnow.TN_objects.container import Container
+from pytextnow.TN_objects.error import FailedRequest, InvalidEvent
+from pytextnow.TN_objects.message import Message
+from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
+from pytextnow.TN_objects.user import User
+from pytextnow.database.db import DatabaseHandler
+from pytextnow.tools.constants import *
+from pytextnow.tools.events import EventManager
+from pytextnow.tools.utils import login
 
 
 class Client:
     # Make username required so sids are saved to db properly
     def __init__(self, username, cookie=None, schema: str = None, db_name="text_nowAPI.sqlite3"):
+
+        self._username = username
+        self._cookie = cookie
         self.db_handler = DatabaseHandler(schema=schema, db_name=db_name)
         self.__user = User(
             username=username,
@@ -81,7 +83,7 @@ class Client:
             print("\n\nYou don't seem to have logged in before. Please do so now...\n\n")
             # Give time to notice what what printed
             time.sleep(1.3)
-            self.__user = self.__login(self.user.username)
+            self.__user = self.__login(self._username)
         self.cookies['connect.sid'] = self.__user.sid
         print("User sid successfully updated and cookie is set. Returning...")
         self.__user = updated_user
@@ -114,9 +116,7 @@ class Client:
         """
         return Container(
             [
-                Message(msg, self) \
-                    if msg["type"] == MESSAGE_TYPE \
-                    else MultiMediaMessage(msg, self) \
+                Message(msg) if msg["type"] == MESSAGE_TYPE else MultiMediaMessage(msg)
                 for msg in self.get_raw_messages()
             ]
         )
@@ -130,8 +130,12 @@ class Client:
         for contact in self.get_contacts():
             # Send get for 200 contacts per page
             req = self.session.get(
-                "https://www.textnow.com/api/users/" + self.username + f"/messages?contact_value={contact.number}&start_message_id=99999999999999&direction=past&page_size=200&get_archived=1",
+                "https://www.textnow.com/api/users/"
+                + self._username
+                + f"/messages?contact_value="
+                  f"{contact.number}&start_message_id=99999999999999&direction=past&page_size=200&get_archived=1",
                 headers=self.headers, cookies=self.cookies)
+
             # Change user sid if it's changed
             new_sid = req.cookies['connect.sid']
             if new_sid != self.__user.sid:
@@ -220,7 +224,7 @@ class Client:
                         "contact_value": to,
                         "contact_type": 2, "read": 1,
                         "message_direction": 2, "message_type": msg_type,
-                        "from_name": self.username,
+                        "from_name": self._username,
                         "has_video": has_video,
                         "new": True,
                         "date": datetime.now().isoformat(),
@@ -246,16 +250,16 @@ class Client:
                                                                                               '"message_direction":2,'
                                                                                               '"message_type":1,'
                                                                                               '"from_name":"' +
-                        self.username + '","has_video":false,"new":true,"date":"' + datetime.now().isoformat() + '"} '
+                        self._username + '","has_video":false,"new":true,"date":"' + datetime.now().isoformat() + '"} '
             }
 
-        response = self.session.post('https://www.textnow.com/api/users/' + self.username + '/messages',
+        response = self.session.post('https://www.textnow.com/api/users/' + self._username + '/messages',
                                      headers=self.headers, cookies=self.cookies, data=data)
         # Refresh after post
         self.session.get(response.url)
         # Check sid again
         new_sid = response.cookies['connect.sid']
-        if new_sid != self._user_sid:
+        if new_sid != self.__user.sid:
             self.auth_reset(sid=new_sid, auto_rotating=True, method="send_sms() After POST request")
 
         if not str(response.status_code).startswith("2"):
@@ -293,21 +297,19 @@ class Client:
 
         return deco
 
-    def request_handler(self, status_code: int):
-        status_code = str(status_code)
-        raise FailedRequest(status_code)
+    @staticmethod
+    def request_handler(status_code: int):
+        raise FailedRequest(str(status_code))
 
-    def __login(self, username):
+    def __login(self, username: str):
         """
         Wrap the call to login to save the sid/username
         to the database on login completion
         """
         sid = login()
-        user = self.db_handler.user_exists(
-            username=self.username, return_user=True
-        ) or None
+        user = self.db_handler.user_exists(username=self._username, return_user=True) or None
         if user:
-            return self.db_handler.update_user({'id': user.id, 'sid': sid})
+            return self.db_handler.update_user(user.db_id, {'db_id': user.db_id, 'sid': sid})
         return self.db_handler.create_user({'username': username, 'sid': sid})
 
     def __get_sid(self, username: str):

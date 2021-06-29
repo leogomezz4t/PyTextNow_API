@@ -6,4 +6,4 @@ class User:
         self.username = username
     
     def __str__(self):
-        return f"<{self.__class__.__name__} db_id={self.db_id}>"
+        return f'<{self.__class__.__name__} db_id={self.db_id}>'

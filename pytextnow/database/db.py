@@ -545,16 +545,14 @@ class DatabaseHandler(BaseDatabaseHandler):
         """
         Update a user record in the database
 
+        :param db_id: User's database ID
         :param new_data: Dictionary whose keys are fields and values
             are the new values for the field.
             MUST contain a key 'db_id' with an integer value of an existing object
         """
         return self._update_obj(self.get_table_name('User'), db_id, new_data)
 
-    def user_exists(
-            self, username: str = None,
-            sid: str = None, return_user: bool = False
-    ) -> typing.Union[bool, User]:
+    def user_exists(self, username: str = None, sid: str = None, return_user: bool = False) -> typing.Union[bool, User]:
         """
         Return True/False if user exists in db
         """
