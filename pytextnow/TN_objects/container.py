@@ -1,10 +1,5 @@
 import datetime
-def str_to_date(string):
-    """
-    Convert a string into a datetime object
-    """
-    # This may not work
-    return datetime.datetime.strptime(string)
+
 
 class Container(list):
     def __init__(self, item_list: list):
@@ -36,7 +31,7 @@ class Container(list):
         """
         try:
             # Modify this objects item list
-            new_items = self.item_list.sort(key=lambda obj: str_to_date(obj.date), reversed=True)
+            new_items = self.item_list.sort(key=lambda obj: self.str_to_date(obj.date), reversed=True)
             setattr(self, 'item_list', new_items)
             return self
         except:
@@ -47,3 +42,11 @@ class Container(list):
         Returns the first object in the list
         """
         return None if len(self.item_list) == 0 else self.item_list[0]
+
+    @staticmethod
+    def str_to_date(string):
+        """
+        Convert a string into a datetime object
+        """
+        # This may not work
+        return datetime.datetime.strptime(string)

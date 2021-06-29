@@ -1,4 +1,3 @@
-
 class User:
 
     def __init__(self, username=None, sid=None, db_id=None, *args, **kwargs) -> None:

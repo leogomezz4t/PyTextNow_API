@@ -1,9 +1,3 @@
-from datetime import datetime
-
-import mimetypes
-import json
-
-
 class Contact:
     def __init__(self, from_db=False, *args, **kwargs):
         self.raw_obj = kwargs

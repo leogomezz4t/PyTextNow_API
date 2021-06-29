@@ -1,6 +1,8 @@
 import threading
 import time
 import typing
+
+
 # Why would you run this for hours unless you made a desktop app
 # In Minutes < 60 seconds times 60 minutes >
 class ThreadManager(object):
@@ -26,14 +28,15 @@ class ThreadManager(object):
     to thread names in a dictionary and we have a list of threads to be terminated. Do a simple check
     if thread_name in self.must_terminate: break
     """
+
     def __init__(
             self, max_threads=5,
-        ) -> None:
+    ) -> None:
         # Give the manager its own connection to the database
         # This will NOT recreate nor effect the existing tables/db
         # created by client instantiation. only a seperate connection
         # Used for the @on decorator
-    # Management
+        # Management
         # Basically a sigkill for all responsive threads
         self.__stop = False
         # Tell all threads to wait
@@ -68,7 +71,7 @@ class ThreadManager(object):
             'sms_sent': "Corresponding database function thread (uncalled)",
             'sms_received': "Corresponding database function thread (uncalled)",
             'sms_deleted': "Corresponding database function thread (uncalled)",
-            
+
             'mms_sent': "Corresponding database function thread (uncalled)",
             'mms_received': "Corresponding database function thread (uncalled)",
             'mms_deleted': "Corresponding database function thread (uncalled)",
@@ -76,16 +79,16 @@ class ThreadManager(object):
             'user_updated': "Corresponding database function thread (uncalled)",
             'user_created': "Corresponding database function thread (uncalled)",
             'user_deleted': "Corresponding database function thread (uncalled)",
-            
+
             'contact_created': "Corresponding database function thread (uncalled)",
             'contact_deleted': "Corresponding database function thread (uncalled)",
             'contact_updated': "Corresponding database function thread (uncalled)",
         }
         self.__active_threads = []
         self.__inactive_threads = {}
-            # Store what the threads were doing, their args,
-            # where they were in their operation etc.
-            # on wait request to release resources
+        # Store what the threads were doing, their args,
+        # where they were in their operation etc.
+        # on wait request to release resources
         self.__default_thread_state = {
             "started_at": time.perf_counter,
             "ended_at": time.perf_counter,
@@ -102,7 +105,8 @@ class ThreadManager(object):
         # Match event names with the threads they start
 
         self.__setup()
-  # Management
+
+    # Management
 
     def __setup(self):
         self.__set_thread_states()
@@ -114,7 +118,7 @@ class ThreadManager(object):
         if len(self.__active_threads) >= len(self.__max_threads):
             # Add thread to queue, no threads currently available
             return self.__add_to_queue(thread_name)
-        
+
         #########################################
         # Change this to allow easier access to #
         # create your own event threads         #
@@ -146,7 +150,7 @@ class ThreadManager(object):
         self.__active_threads.append(thread_name)
 
         desired_thread = self.__inactive_threads.pop(thread_name)
-        self.__thread_states[thread_name]['started_at'] =\
+        self.__thread_states[thread_name]['started_at'] = \
             self.__thread_states[thread_name]['started_at']()
         started_thread = desired_thread.start()
 
@@ -190,7 +194,7 @@ class ThreadManager(object):
         args = thread_state.get('args')
         return thread_state.get('func')(args)
 
-  # Thread Targets
+    # Thread Targets
 
     def initial_db_check(self, schema):
         """
@@ -201,12 +205,12 @@ class ThreadManager(object):
 
     def check_and_update(
             self, table_name, objects_or_data: typing.Union[typing.Any, typing.Dict[str, str]]
-        ) -> None:  
+    ) -> None:
         """
         Check if all objects (or the first N) are in the database already
         if not, update the table
         """
-        
+
         pass
 
     def please_wait(self, message="Please Wait"):
@@ -230,20 +234,20 @@ class ThreadManager(object):
             elif last_dot_amount <= min_dots:
                 going_down = False
                 going_up = True
-        # Actually go up or down
+            # Actually go up or down
             if going_down:
-                print("."*last_dot_amount)
+                print("." * last_dot_amount)
                 last_dot_amount -= 1
             elif going_up:
-                print("."*last_dot_amount)
+                print("." * last_dot_amount)
                 last_dot_amount += 1
             if not self.working:
                 break
-        # Don't bury the messages from the program
+            # Don't bury the messages from the program
             time.sleep(0.5)
         return None
 
-  # Utilities
+    # Utilities
     def set_completed_in(self, thread_name):
         """
         Get the time it took to finish the thread
@@ -259,7 +263,7 @@ class ThreadManager(object):
         Get the result of the thread name,
         """
         return self.__thread_results.get(thread_name)()
-    
+
     def await_results(self, thread_name):
         waiting = True
         while waiting:
@@ -295,11 +299,11 @@ class ThreadManager(object):
         else:
             self.__inactive_threads[func.func_name] = new_thread
 
-
     def as_async(self, func, *args, **kwargs):
         def __to_async(func, *args, **kwargs):
             self.to_async(func, start=False, *args, **kwargs)
             return func
+
         return __to_async(func, *args, **kwargs)
 
     def get_active_thread_index(self, thread_name):
@@ -308,7 +312,7 @@ class ThreadManager(object):
             if self.active_jobs[index] == thread_name:
                 return index
         raise Exception(f"No active job found with thread name {thread_name}")
-    
+
     def has_active(self):
         return len(self.__active_threads) > 0
 
@@ -317,11 +321,11 @@ class ThreadManager(object):
             threads = self.__inactive_threads.copy()
         for thread_name in threads.keys():
             self.__thread_states[thread_name] = self.default_thread_state.copy()
-    
+
     def stop_thread(self, thread_name):
         del self.__active_threads[self.get_active_thread_index(thread_name)]
         self.__thread_states.get(thread_name)['running'] = False
-    
+
     def still_running(self, thread_name):
         """
         Return True if a thread is still running, return the time it's been running

@@ -1,6 +1,6 @@
 from .message import Message
+from ..tools.constants import MULTIMEDIA_MESSAGE_TYPE
 import json
-MULTIMEDIA_MESSAGE_TYPE = 1
 
 
 class MultiMediaMessage(Message):

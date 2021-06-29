@@ -1,17 +1,10 @@
 from datetime import datetime
-import datetime as dt
-from urllib.parse import quote
-
-import mimetypes
 import json
-import time
-
-MESSAGE_TYPE = 0
 
 
 class Message:
     def __init__(self, from_db=False, **kwargs):
-        print("\n\nFrom Message.__init__\n",json.dumps(kwargs, indent=4))
+        print("\n\nFrom Message.__init__\n", json.dumps(kwargs, indent=4))
         msg_obj = kwargs
         if from_db:
             self.content = msg_obj['content']
@@ -33,5 +26,4 @@ class Message:
         self.raw = msg_obj
 
     def __str__(self):
-        s = f"<{self.__class__.__name__} number: {self.number}, content: {self.content}>"
-        return s
+        return f'<{self.__class__.__name__} number: {self.number}, content: {self.content}>'

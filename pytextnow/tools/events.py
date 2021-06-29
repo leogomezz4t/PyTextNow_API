@@ -5,12 +5,14 @@ from queue import Queue
 from functools import wraps
 from .workers import ThreadManager
 
+
 class EventManager(object):
     """
     Manage sending events to ThreadManager or wherever
 
     Starts event dispatcher on instantiation
     """
+
     def __init__(self, max_threads=None) -> None:
         self.threads = ThreadManager(max_threads)
         self.__working = True
@@ -23,12 +25,14 @@ class EventManager(object):
 
         }
         self.registered_callbacks = {}
+
     def as_event(self, func, name=None, for_event=None, auto_start=False, *args, **kwargs):
         """
         Emit a signal to the ThreadManager to trigger
         a thread to start or be added to the queue
         if no available threads
         """
+
         @wraps(func)
         def wrap(func, name, *args, **kwargs):
             name = func.func_name if not name else name
@@ -40,7 +44,8 @@ class EventManager(object):
             callback_info['assigned_to'] = None if not for_event else for_event
             if auto_start:
                 self.emit_event(name)
-            #callback info looks like this
+            # callback info looks like this
+
         return wrap(
             func, name,
             for_event, auto_start,
@@ -58,6 +63,7 @@ class EventManager(object):
         Register a function as an event and listen for its
         signal
         """
+
         @wraps(func)
         def decorated(func, name=None, *args, **kwargs):
             name = func.func_name if not name else name
@@ -66,6 +72,7 @@ class EventManager(object):
                 'args': args,
                 'kwargs': kwargs
             }
+
         return decorated(func, name, *args, **kwargs)
 
     def register_callback(self, func, name=None, for_event=None, *args, **kwargs):
@@ -82,6 +89,7 @@ class EventManager(object):
 
         :param callback_info: Dictionary of three elements. one is the
         """
+
         @wraps(func)
         def decorated(func, name=None, for_event=None, *args, **kwargs):
             name = func.func_name if not name else name
@@ -92,7 +100,7 @@ class EventManager(object):
                 callback_info = {"func": func}
             callback_info['for_event'] = None if not for_event else for_event
             self.__registered_callbacks[name] = callback_info
-            #callback info looks like this
+            # callback info looks like this
             return func(*args, **kwargs)
 
         return decorated()
@@ -109,10 +117,9 @@ class EventManager(object):
                 f"but {callback_name} is not a registered callback, please register "
                 f"{callback_name} with the decorator or method and try again!"
             )
-    
+
     def await_results(self, event_name):
         return self.threads.await_results(event_name)
-
 
     def event_dispatcher(self):
         """
@@ -132,7 +139,7 @@ class EventManager(object):
         Start doing things on instantiation
         """
         # for event in self.registered_events.items()
-            # if current
+        # if current
         self.threads.start_thread('event_dispatcher')
 
     def __exit__(self, *args, **kwargs):
