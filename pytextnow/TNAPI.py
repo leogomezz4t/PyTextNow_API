@@ -21,16 +21,12 @@ import atexit
 
 
 class Client:
-    def __init__(
-        # Make username required so sids are saved to db properly
-            self, username,
-            cookie=None, schema: str = None,
-            db_name="text_nowAPI.sqlite3"
-        ):
+    # Make username required so sids are saved to db properly
+    def __init__(self, username, cookie=None, schema: str = None, db_name="text_nowAPI.sqlite3"):
         self.db_handler = DatabaseHandler(schema=schema, db_name=db_name)
         self.__user = User(
             username=username,
-            sid=self.db_handler.get_user(username).sid or self.__login(username)
+            sid=self.__get_sid(username)
         )
         self.cookies = {
             'connect.sid': self.__user.sid
@@ -47,8 +43,8 @@ class Client:
     # Functions
     def on_exit(self):
         if len(self.events) == 0:
-            #if self.thread_manager.has_active():
-                #self.thread_manager.stop()
+            # if self.thread_manager.has_active():
+            # self.thread_manager.stop()
             return
 
         while 1:
@@ -58,7 +54,6 @@ class Client:
                     for msg in unread_msgs:
                         msg.mark_as_read()
                         func(msg)
-
 
     def auth_reset(self, sid=None, auto_rotating=False, method=None):
         """
@@ -78,7 +73,7 @@ class Client:
         if sid:
             updated_user = self.db_handler.update_user(
                 self.__user.id, {'sid': sid}
-            # If the user doesn't exist in the db. Possibly catches obscure SymaticError
+                # If the user doesn't exist in the db. Possibly catches obscure SymaticError
             ) or self.__login(self.__user.username)
         else:
             updated_user = None
@@ -119,10 +114,10 @@ class Client:
         """
         return Container(
             [
-                Message(msg, self)\
-                if msg["type"] == MESSAGE_TYPE\
-                else MultiMediaMessage(msg, self)\
-                    for msg in self.get_raw_messages()
+                Message(msg, self) \
+                    if msg["type"] == MESSAGE_TYPE \
+                    else MultiMediaMessage(msg, self) \
+                for msg in self.get_raw_messages()
             ]
         )
 
@@ -196,7 +191,6 @@ class Client:
         if cookie_sid != self.__user.sid:
             self.auth_reset(sid=cookie_sid, auto_rotating=True, method="send_mms() After GET request")
 
-
         if str(file_url_holder_req.status_code).startswith("2"):
             file_url_holder = json.loads(file_url_holder_req.text)["result"]
 
@@ -241,7 +235,6 @@ class Client:
                     self.request_handler(place_file_req.status_code)
         else:
             self.request_handler(file_url_holder_req.status_code)
-
 
     def send_sms(self, to, text):
         """
@@ -311,8 +304,14 @@ class Client:
         """
         sid = login()
         user = self.db_handler.user_exists(
-                username=self.username, return_user=True
-            ) or None
+            username=self.username, return_user=True
+        ) or None
         if user:
-            return self.db_handler.update_user({'id': user.id,'sid': sid})
+            return self.db_handler.update_user({'id': user.id, 'sid': sid})
         return self.db_handler.create_user({'username': username, 'sid': sid})
+
+    def __get_sid(self, username: str):
+        user = self.db_handler.get_user(username)
+        if user:
+            return user.sid
+        return self.__login(username)

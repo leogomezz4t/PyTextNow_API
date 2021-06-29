@@ -535,7 +535,11 @@ class DatabaseHandler(BaseDatabaseHandler):
         :return: User object or None
         """
         # container of results
-        return self.filter(self.get_table_name('User'), {'username': username}).first()
+        container_obj = self.filter(self.get_table_name('User'), {'username': username})
+        if container_obj:
+            # print(f'container val: {container_obj}\ntype: {type(container_obj)}')
+            return container_obj.first()
+        return
 
     def update_user(self, db_id, new_data: typing.Dict[str, str]) -> typing.Union[User, None]:
         """
