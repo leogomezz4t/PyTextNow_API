@@ -304,3 +304,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         os.remove("text_nowAPI.sqlite3")
+        raise e
