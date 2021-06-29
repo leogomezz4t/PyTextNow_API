@@ -355,7 +355,7 @@ class BaseDatabaseHandler(object):
         :param return_raw: If True, return the raw data returned from the database operation
         """
         try:
-            print("\n\nSQL COMMAND:", sql, "\n\n")
+            # print("\n\nSQL COMMAND:", sql, "\n\n")
             # If we're not commiting, we want the results for sure
             if values:
                 results = self.__cursor.execute(sql, values)
@@ -374,7 +374,7 @@ class BaseDatabaseHandler(object):
             elif return_raw:
                 return results
             elif len(dicts) == 0:
-                print("Empty results")
+                # print("Empty results")
                 return dicts
             elif return_results:
                 # Map results to Results object  if len > 1
