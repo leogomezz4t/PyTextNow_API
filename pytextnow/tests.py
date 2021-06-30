@@ -1,3 +1,4 @@
+from pytextnow.tools.events import EventManager
 import random
 import os
 import secrets
@@ -58,9 +59,10 @@ class DatabaseHandlerTest:
         self.generate_mms()
         self.generate_contacts()
         print("\n\nAll tables and objects created successfully...Moving on to testing...")
+        time.sleep(0.75)
 
     def generate_users(self):
-        with open("/home/trip/Desktop/Code/python/TNAPI/PyTextNow_API/pytextnow/usernames.txt", 'r') as usernames:
+        with open("usernames.txt", 'r') as usernames:
 
             for name in usernames.readlines():
                 name = name.strip("\n")
@@ -78,11 +80,13 @@ class DatabaseHandlerTest:
         assert len(users) > 87
         self.extract_ids('users', users)
         print("\n\nUsers Successfully created!\n\n")
+        time.sleep(0.75)
+
 
     
     def generate_sms(self):
         import random
-        with open("/home/trip/Desktop/Code/python/TNAPI/PyTextNow_API/pytextnow/words.txt", 'r') as words:
+        with open("words.txt", 'r') as words:
             lines = words.readlines()
             for line in range(len(lines)+1):
                 minus_days = str(datetime.datetime.now() - timedelta(
@@ -110,9 +114,10 @@ class DatabaseHandlerTest:
         assert len(sms) > 0
         self.extract_ids('sms', sms)
         print("\n\nSMS Successfully created!\n\n")
+        time.sleep(0.75)
 
     def generate_mms(self):
-        with open('/home/trip/Desktop/Code/python/TNAPI/PyTextNow_API/pytextnow/words.txt', 'r') as words:
+        with open('words.txt', 'r') as words:
 
             lines = words.readlines()
             for i in range(len(lines) + 1):
@@ -148,6 +153,7 @@ class DatabaseHandlerTest:
         assert len(mms) > 58
         self.extract_ids('mms', mms)
         print("MMS Successfully created!")
+        time.sleep(0.75)
 
     def generate_contacts(self):
         for i in range(0,151):
@@ -165,6 +171,7 @@ class DatabaseHandlerTest:
         assert len(contacts) > 149
         self.extract_ids('contacts', contacts)
         print("Contacts Successfully created!")
+        time.sleep(0.75)
 
     def test_filters(self):
         """
@@ -185,6 +192,7 @@ class DatabaseHandlerTest:
             except:
                 assert len(users) > 0
                 print(f"Filters with col {col_filter} seem to work on the users table!!")
+            
 
         # Testing SMS
             col_filter = 'number'
@@ -220,8 +228,11 @@ class DatabaseHandlerTest:
             except:
                 assert len(users) > 0
                 print(f"Filters with col {col_filter} seem to work on the contacts table!!")
+        time.sleep(0.75)
+
 
     def test_updates(self):
+        time.sleep(0.75)
         
         for contact_id in self.test_data['contacts']['db_id']:
             old = self.db_handler.filter('contacts', {'db_id': contact_id}).first()
@@ -234,7 +245,8 @@ class DatabaseHandlerTest:
             modified = self.db_handler.update_user(user_id, {'username': self.faker.name()})
             print(old.username, modified.username)
             assert old.username != modified.username
-
+        print("\n\nAll updates work!\n")
+        time.sleep(0.75)
 
     def test_deletes(self):
         for contact_id in self.test_data['contacts']['db_id']:
@@ -272,7 +284,8 @@ class DatabaseHandlerTest:
             else:
                 print("Successfully deleted mms!")
                 continue
-
+        print("\n\nAll deletes work!")
+        time.sleep(0.75)
 
     def extract_ids(self, key, objects):
         for i in objects:
@@ -291,15 +304,60 @@ class DatabaseHandlerTest:
         time.sleep(1)
         self.test_deletes()
         print("\n\nAll tests ran successfully. Database handler is now stable!!!\n\n")
-        quit()
+        return print("\n\nAll tests ran successfully. Database handler is now stable!!!\n\n")
 
     def clean_line(self, line):
         for i in self.useless_characters:
             line.strip(i)
         return line
+
+class EventHandlerTest:
+
+    def __init__(self) -> None:
+        # Initialize database, start event dispatcher
+        self.events = EventManager(5)
+        self.result_signatures = {}
+        self.setup()
+        pass
+
+    def setup(self):
+        pass
+    
+    def count_to_one_thousand(self):
+        for i in range(0, 1001):
+            print(i)
+
+    def random_calculation(self):
+        """
+        Perform a random calculation to test
+        results
+        """
+        pass
+
+    def test_max_threads(self):
+        pass
+
+    def test_custom_events(self):
+        pass
+
+    def test_custom_callbacks(self):
+        pass
+
+    def test_result_tracking(self):
+        pass
+
+    def test_stops(self):
+        pass
+    
+    def test_waits(self):
+        pass
+
+
 if __name__ == "__main__":
     try:
         test = DatabaseHandlerTest()
+        test.setup()
+        events = EventManager(3)
         os.remove("text_nowAPI.sqlite3")
     except Exception as e:
         print(e)

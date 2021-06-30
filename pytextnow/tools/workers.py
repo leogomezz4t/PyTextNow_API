@@ -195,24 +195,6 @@ class ThreadManager(object):
         return thread_state.get('func')(args)
 
     # Thread Targets
-
-    def initial_db_check(self, schema):
-        """
-        Check the database to see if there are any records
-        if not, start some threads to get and insert records into the datbase
-        """
-        pass
-
-    def check_and_update(
-            self, table_name, objects_or_data: typing.Union[typing.Any, typing.Dict[str, str]]
-    ) -> None:
-        """
-        Check if all objects (or the first N) are in the database already
-        if not, update the table
-        """
-
-        pass
-
     def please_wait(self, message="Please Wait"):
         """
         For a long running process or to be run during
@@ -303,7 +285,6 @@ class ThreadManager(object):
         def __to_async(func, *args, **kwargs):
             self.to_async(func, start=False, *args, **kwargs)
             return func
-
         return __to_async(func, *args, **kwargs)
 
     def get_active_thread_index(self, thread_name):

@@ -1,6 +1,7 @@
 """
 Start integrating state management
 """
+from copy import deepcopy
 from queue import Queue
 from functools import wraps
 from .workers import ThreadManager
@@ -12,98 +13,97 @@ class EventManager(object):
 
     Starts event dispatcher on instantiation
     """
-
-    def __init__(self, max_threads=None) -> None:
-        self.threads = ThreadManager(max_threads)
+    def __init__(self, max_threads=5, start_dispatcher=True) -> None:
+        self.__threads = ThreadManager(max_threads)
         self.__working = True
-        # Max size of 10, if more gets pushed raise a StackOverflowError
+        # Max of 10 tasks can be queued by default, if more gets pushed raise a StackOverflowError
         # because it shouldn't take that long to finish the existing threads
-        self.event_queue = Queue(maxsize=10)
-        # Actual threads in thread manager to be started on event fire
-        self.__event_threads = {}
-        self.registered_events = {
+        self.__event_queue = []
+        self.__registered_events = {}
+        self.__registered_callbacks = {}
+        self.__default_callback_info = {
+                'func': None,
+                'args': None,
+                'kwargs': None,
+                'assigned_to': None
+            }
+        if start_dispatcher:
+            self.__threads.start_thread('event_dispatcher')
 
-        }
-        self.registered_callbacks = {}
 
-    def as_event(self, func, name=None, for_event=None, auto_start=False, *args, **kwargs):
-        """
-        Emit a signal to the ThreadManager to trigger
-        a thread to start or be added to the queue
-        if no available threads
-        """
 
-        @wraps(func)
-        def wrap(func, name, *args, **kwargs):
-            name = func.func_name if not name else name
-            try:
-                callback_info = kwargs.pop('callback')
-                callback_info[name] = func
-            except KeyError:
-                callback_info = {"func": func}
-            callback_info['assigned_to'] = None if not for_event else for_event
-            if auto_start:
-                self.emit_event(name)
-            # callback info looks like this
-
-        return wrap(
-            func, name,
-            for_event, auto_start,
-            *args, **kwargs
-        )
-
-    def emit(self, event_name):
+    def start(self, event_name):
         """
         Send a signal
         """
-        self.event_queue.put(event_name)
+        if len(self.__event_queue) >= self.__max_q_size:
+            raise Exception(
+                f"The event {event_name} attempted to fire but the event "
+                "queue is full! Please increase the maximum size or "
+                "modify the execution flow of the program!"
+            )
+        self.__event_queue.append(event_name)
 
-    def register_event(self, func, name=None, *args, **kwargs):
+# Decorators
+
+    def register_target(self, name=None):
+        """
+        Register a function as a thread target to be started when
+        the event(s) it's bound to executes
+        """
+        def wrap(func):
+            def wrapper(*args, **kwargs):
+                self.__threads._register(func, name, *args, **kwargs)
+                return func
+            return wrapper
+        return wrap
+
+    def register_event(self, fire=False, name=None, target={}):
         """
         Register a function as an event and listen for its
-        signal
+        signal. Don't execute on function call and return an
+        unchanged function
         """
+        def wrap(func):
+            def decorated(*args, **kwargs):
+                event_name = func.func_name
+                if name:
+                    event_name = name
+                self.__registered_events[event_name] = {
+                    'func': func,
+                    'args': args,
+                    'kwargs': kwargs,
+                    'target': {
+                        'func': target['func'],
+                        'args': target['args'],
+                        'kwargs': target['kwargs'],
+                        'callback': target['callback']
+                    }
+                }
+                if fire:
+                    if len(target) == 0:
+                        raise Exception("The target dictionary of an event cannot be empty!")
+                    
+                    self.__add_to_queue(self.__registered_events[event_name])
+                return func
+            return decorated
+        return wrap
 
-        @wraps(func)
-        def decorated(func, name=None, *args, **kwargs):
-            name = func.func_name if not name else name
-            self.registered_events[name] = {
-                'func': func,
-                'args': args,
-                'kwargs': kwargs
-            }
-
-        return decorated(func, name, *args, **kwargs)
-
-    def register_callback(self, func, name=None, for_event=None, *args, **kwargs):
+    def register_callback(self, name=None):
         """
         Decorator to indicate that the decorated function is for
         on_exit purposes. if provided a for_event arg, the decorated
         function will be called when the thread finishes.
-
-        Pass 
-        {
-            "name": name you'll reference in @register_event,
-            "for_event": thread_name,
-        }
-
-        :param callback_info: Dictionary of three elements. one is the
         """
-
-        @wraps(func)
-        def decorated(func, name=None, for_event=None, *args, **kwargs):
-            name = func.func_name if not name else name
-            try:
-                callback_info = kwargs.pop('callback')
-                callback_info[name] = func
-            except KeyError:
-                callback_info = {"func": func}
-            callback_info['for_event'] = None if not for_event else for_event
-            self.__registered_callbacks[name] = callback_info
-            # callback info looks like this
-            return func(*args, **kwargs)
-
-        return decorated()
+        def decorated(func):
+            def wrapped(*args, **kwargs):
+                callback_name = func.func_name
+                if name:
+                    callback_name = name
+                self.__registered_callbacks[callback_name] = self.__default_callback_info.copy()
+                return func
+            return wrapped
+        return decorated
 
     def bind_callback(self, callback_name, event_name):
         """
@@ -115,39 +115,92 @@ class EventManager(object):
             raise Exception(
                 f"You attemmpted to bind {callback_name} to the event {event_name} "
                 f"but {callback_name} is not a registered callback, please register "
-                f"{callback_name} with the decorator or method and try again!"
+                f"{callback_name} with the decorator or use the managers method and try again!"
             )
 
+    def __get_event_bound_callback(self, event_name):
+        for callback_name, info in self.__registered_callbacks.items():
+            if info.get('assigned_to') == event_name:
+                return callback_name
+        raise Exception(f"Failed to get callback bound to event {event_name}")
+
+    def register_target(self, func, target_name, *args, **kwargs):
+        """
+
+        Tell the thread manager to register a function for use
+        as the target of a thread when the event it's bound to
+        is fired. This is required to run custom functions in the
+        background. If not registered you get an Exception
+
+        ANYTHING bound with this will become the target
+        of a thread/will be able to be used in a direct call to
+        EventManager.emit('name of the method you bound or the name you passed')
+        """ 
+        pass
+
+    def bind_target_to_event(self, func, name=None, *args, **kwargs):
+        """
+        Allow function decoration to register the function as a thread
+        target
+        """
+        pass
+
     def await_results(self, event_name):
-        return self.threads.await_results(event_name)
+        return self.__threads.await_results(event_name)
 
     def event_dispatcher(self):
         """
         Dispatch the events
         """
         while self.__working:
-            if not self.event_queue.empty():
-                for event_name in self.event_queue:
-                    self.threads.start_thread(event_name)
+            # Prevent race conditions by deep copying
+            # the queue list and its dictionaries
+            q_copy = deepcopy(self.__event_queue)
+            q_has_events = True if len(q_copy) > 0 else False
+            # Continue trying to start threads until
+            # some are available
+            if not self.__working:
+                if (
+                        not self.__finish_before_stop
+                        or not q_has_events
+                    ):
+                    break
+            if q_has_events:
+                # Make it first in first out by iterating
+                # backwards
+                for event_index in range(
+                        len(q_copy) - 1,
+                        -1, -1, -1
+                    ):
+                    if not self.__threads._all_threads_used():
+                        event_name = q_copy[event_index]['name']
+                        self.__threads._start_thread(
+                            q_copy[event_index]
+                        )
+                        # Ensure we delete the right event in case the list
+                        # was updated before getting here
+                        self.__remove_from_queue(event_name)
 
-    def __starting_what(self, event_name, greeting=None):
-        greeting = None if not greeting else f"Starting event...{event_name}"
-        print("\n\ngreeting\n\n")
+    def __remove_from_queue(self, event_name):
+        for event_idx in range(len(self.__event_queue)-1):
+            if self.__event_queue['name'] == event_name:
+                del self.__event_queue[event_idx]
 
-    def __enter__(self, *args, **kwargs):
-        """
-        Start doing things on instantiation
-        """
-        # for event in self.registered_events.items()
-        # if current
-        self.threads.start_thread('event_dispatcher')
+    def __get_event_idx(self, event_name):
+        for event_idx in range(len(self.__event_queue)-1):
+            if self.__event_queue['name'] == event_name:
+                return event_idx
 
-    def __exit__(self, *args, **kwargs):
+    def __add_to_queue(self, event_name, event_dict):
         """
-        Perform a cleanup
+        Add an event dictionary to the queue
         """
-        pass
-
-    @staticmethod
-    def can_add_thread(self):
-        pass
+        # Is registered event?
+        if event_dict['name'] not in list(self.__registered_events.keys()):
+            raise Exception(
+                f"Cannot add event {event_dict['name']} to queue "
+                f"because {event_dict['name']} is not a registered event. "
+                f"Register {event_dict['name']} as an event and try again!"
+            )
+        # Add
+        self.__event_queue.append(event_dict)
