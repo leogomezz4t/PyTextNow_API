@@ -240,15 +240,22 @@ class Client:
         """
         data = \
             {
-                'json': '{"contact_value":"' + to + '","contact_type":2,"message":"' + text + '","read":1,'
-                                                                                              '"message_direction":2,'
-                                                                                              '"message_type":1,'
-                                                                                              '"from_name":"' +
-                        self._username + '","has_video":false,"new":true,"date":"' + datetime.now().isoformat() + '"} '
+                'json': {
+                    "contact_value": str(to),
+                    "contact_type":2,
+                    "message": str(text),
+                    "read":1,
+                    "message_direction":2,
+                    "message_type":1,
+                    "from_name": self._username,
+                    "has_video": False,
+                    "new": True,
+                    "date": datetime.now().isoformat()
+                    }
             }
 
         response = self.session.post('https://www.textnow.com/api/users/' + self._username + '/messages',
-                                     headers=self.headers, cookies=self.cookies, data=data)
+                                     headers=self.headers, cookies=self.cookies, json=data["json"])
         # Refresh after post
         self.session.get(response.url)
         # Check sid again
