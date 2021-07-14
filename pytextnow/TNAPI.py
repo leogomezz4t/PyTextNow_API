@@ -12,28 +12,26 @@ from pytextnow.TN_objects.container import Container
 from pytextnow.TN_objects.error import FailedRequest, InvalidEvent
 from pytextnow.TN_objects.message import Message
 from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
-from pytextnow.TN_objects.user import User
 from pytextnow.database.db import DatabaseHandler
 from pytextnow.tools.constants import *
-from pytextnow.tools.events import EventManager
-from pytextnow.tools.utils import login
+from pytextnow.tools.robot import RoboBoi
 
 
 class Client:
-    # Make username required so sids are saved to db properly
-    def __init__(self, username, cookie=None, schema: str = None, db_name="text_nowAPI.sqlite3"):
-
+    # Allow empty username for choosing which account to use
+    def __init__(
+            self, username: str = None,
+            schema: str = None,
+            db_name: str = "text_nowAPI.sqlite3"
+        ):
         self._username = username
-        self._cookie = cookie
-        self.db_handler = DatabaseHandler(schema=schema, db_name=db_name)
-        self.__user = User(
-            username=username,
-            sid=self.__get_sid(username)
-        )
+        self.__db_handler = DatabaseHandler(schema=schema, db_name=db_name)
+        # Start event loop
+        self.__robo_boi = RoboBoi()
+        self.__user = self.__get_user_object(username)
         self.cookies = {
             'connect.sid': self.__user.sid
         }
-        self.events = EventManager()
         self.allowed_events = self.events.registered_events
         self.headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -42,30 +40,35 @@ class Client:
         self.session = requests.session()
         atexit.register(self.on_exit)
 
-    # Functions
-    def on_exit(self):
-        pass
-        # if len(self.events) == 0:
-        #     # if self.thread_manager.has_active():
-        #     # self.thread_manager.stop()
-        #     return
-        #
-        # while 1:
-        #     for event, func in self.events:
-        #         if event == "message":
-        #             unread_msgs = self.get_unread_messages()
-        #             for msg in unread_msgs:
-        #                 msg.mark_as_read()
-        #                 func(msg)
+    def __get_user_object(self, username=None):
+        user = None
+        if username:
+            # Try to get the user with the DB Handler
+            # This will be None if the user is not found.
+            user = self.__db_handler.get_user(username)
+        if not user:
+            # Have the user choose an account. Log in and assign the sid
+            user = self.__robo_boi.choose_account(assign_sid=True)
+        return user
 
-    def auth_reset(self, sid=None, auto_rotating=False, method=None):
+    def __reset_sid(self, sid=None, auto_rotating=False, method=None):
         """
+        Get the new SID for the user and set user.sid to the new value
+
         If auto rotating, print out something to show that it changed
-
-        :optional param sid: String of the connect.sid cookie
-        :optional param auto_rotating: Indicates if auto rotating user sid
-        :optional param method: The method we're auto rotating from
+        
+        :Args:
+            - sid: The value of the connect.sid cookie
+            - auto_rotating: If Client noticed an SID change after hitting
+                the API, this will be True
+            - method: If auto rotating, this will be the method calling
+                '__reset_sid' to be used in a debug print. If not auto
+                rotating, this should be None
+        
+        :Returns:
+            None
         """
+        # If coming from the API
         if auto_rotating:
             print(
                 "\nconnect.sid for user", self.__user.username,
@@ -73,22 +76,12 @@ class Client:
                 "\nNew sid:", sid,
                 f"\nLocation: TNAPI.py -> Client -> {method}"
             )
-        if sid:
-            updated_user = self.db_handler.update_user(
-                self.__user.id, {'sid': sid}
-                # If the user doesn't exist in the db. Possibly catches obscure SymaticError
-            ) or self.__login(self.__user.username)
-        else:
-            updated_user = None
-        if not updated_user:
-            print("\n\nYou don't seem to have logged in before. Please do so now...\n\n")
-            # Give time to notice what what printed
-            time.sleep(1.3)
-            self.__user = self.__login(self._username)
-        self.cookies['connect.sid'] = self.__user.sid
-        print("User sid successfully updated and cookie is set. Returning...")
-        self.__user = updated_user
-        return
+            self.__user.sid = sid
+            # We already have the sid, don't return it
+            return
+        # No sid was provided, let the robot get it
+        self.__user.sid = self.__robo_boi.get_sid(self.__user)
+        return None
 
     def get_raw_contacts(self):
         """
@@ -140,7 +133,7 @@ class Client:
             # Change user sid if it's changed
             new_sid = req.cookies['connect.sid']
             if new_sid != self.__user.sid:
-                self.auth_reset(sid=new_sid, auto_rotating=True, method="get_raw_messages() After GET request")
+                self.__reset_sid(sid=new_sid, auto_rotating=True, method="get_raw_messages() After GET request")
             if str(req.status_code).startswith("2"):
                 messages = json.loads(req.content)
                 all_messages.append(messages["messages"])
@@ -194,7 +187,7 @@ class Client:
         cookie_sid = file_url_holder_req.cookies["connect.sid"]
         # Reassign to new sid
         if cookie_sid != self.__user.sid:
-            self.auth_reset(sid=cookie_sid, auto_rotating=True, method="send_mms() After GET request")
+            self.__reset_sid(sid=cookie_sid, auto_rotating=True, method="send_mms() After GET request")
 
         if str(file_url_holder_req.status_code).startswith("2"):
             file_url_holder = json.loads(file_url_holder_req.text)["result"]
@@ -217,7 +210,7 @@ class Client:
                 # Refresh the page after sending (Possibly not needed)
                 self.session.get(place_file_req.url)
                 if file_req_sid != self.__user.sid:
-                    self.auth_reset(sid=file_req_sid, auto_rotating=True, method="send_mms() After PUT request")
+                    self.__reset_sid(sid=file_req_sid, auto_rotating=True, method="send_mms() After PUT request")
 
                 if str(place_file_req.status_code).startswith("2"):
 
@@ -261,7 +254,7 @@ class Client:
         # Check sid again
         new_sid = response.cookies['connect.sid']
         if new_sid != self.__user.sid:
-            self.auth_reset(sid=new_sid, auto_rotating=True, method="send_sms() After POST request")
+            self.__reset_sid(sid=new_sid, auto_rotating=True, method="send_sms() After POST request")
 
         if not str(response.status_code).startswith("2"):
             self.request_handler(response.status_code)
@@ -301,20 +294,3 @@ class Client:
     @staticmethod
     def request_handler(status_code: int):
         raise FailedRequest(str(status_code))
-
-    def __login(self, username: str):
-        """
-        Wrap the call to login to save the sid/username
-        to the database on login completion
-        """
-        sid = login()
-        user = self.db_handler.user_exists(username=self._username, return_user=True) or None
-        if user:
-            return self.db_handler.update_user(user.db_id, {'db_id': user.db_id, 'sid': sid})
-        return self.db_handler.create_user({'username': username, 'sid': sid})
-
-    def __get_sid(self, username: str):
-        user = self.db_handler.get_user(username)
-        if user:
-            return user.sid
-        return self.__login(username)

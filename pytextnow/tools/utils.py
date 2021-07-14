@@ -1,10 +1,9 @@
-import time
-from ..TN_objects.contact import Contact
-from ..TN_objects.message import Message
-from ..TN_objects.container import Container
-from ..TN_objects.multi_media_message import MultiMediaMessage
-from ..TN_objects.user import User
-from .constants import *
+from pytextnow.TN_objects.contact import Contact
+from pytextnow.TN_objects.message import Message
+from pytextnow.TN_objects.container import Container
+from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
+from pytextnow.TN_objects.user import User
+from pytextnow.tools.constants import *
 
 
 def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False):
@@ -99,11 +98,3 @@ def date_to_str(dt_time):
     Convert a date time object into a string
     """
     return 10000 * dt_time.year + 100 * dt_time.month + dt_time.day
-
-
-def login():
-    print("Go to https://www.textnow.com/messaging and open developer tools")
-    print("\n")
-    print("Open application tab and copy connect.sid cookie and paste it here.")
-    sid = input("connect.sid: ")
-    return sid

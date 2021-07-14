@@ -1,4 +1,3 @@
-from pytextnow.tools.events import EventManager
 import random
 import os
 import secrets
@@ -60,6 +59,21 @@ class DatabaseHandlerTest:
         self.generate_contacts()
         print("\n\nAll tables and objects created successfully...Moving on to testing...")
         time.sleep(0.75)
+
+    def start_tests(self, test_deletes=True):
+        print("\n\nTesting Filters...\n\n")
+        self.test_filters()
+        print("\n\nTesting Updates...\n\n")
+        time.sleep(1)
+        Faker.seed(random.randint(0,500))
+        self.test_updates()
+        print("\n\nTesting Deletes...\n\n")
+        time.sleep(1)
+        success_msg = "\n\nAll tests ran successfully. Database handler is now stable!!!\n\n"
+        if not test_deletes:
+            return print(success_msg)
+        self.test_deletes()
+        return print(success_msg)
 
     def generate_users(self):
         with open("usernames.txt", 'r') as usernames:
@@ -292,72 +306,34 @@ class DatabaseHandlerTest:
             print(i.db_id)
             self.test_data[key]['db_id'].append(i.db_id)
 
-
-    def start_tests(self):
-        print("\n\nTesting Filters...\n\n")
-        self.test_filters()
-        print("\n\nTesting Updates...\n\n")
-        time.sleep(1)
-        Faker.seed(random.randint(0,500))
-        self.test_updates()
-        print("\n\nTesting Deletes...\n\n")
-        time.sleep(1)
-        self.test_deletes()
-        print("\n\nAll tests ran successfully. Database handler is now stable!!!\n\n")
-        return print("\n\nAll tests ran successfully. Database handler is now stable!!!\n\n")
-
     def clean_line(self, line):
         for i in self.useless_characters:
             line.strip(i)
         return line
 
-class EventHandlerTest:
+class PythonApiTest(object):
+    """
+    Test to make sure the various API methods (send_sms, etc.)
+    all work as expected
+    """
 
     def __init__(self) -> None:
-        # Initialize database, start event dispatcher
-        self.events = EventManager(5)
-        self.result_signatures = {}
         self.setup()
-        pass
-
-    def setup(self):
-        pass
+        self.test_login()
+        self.test_sending()
+        self.test_recieving()
+        super().__init__()
     
-    def count_to_one_thousand(self):
-        for i in range(0, 1001):
-            print(i)
-
-    def random_calculation(self):
+    def test_login():
         """
-        Perform a random calculation to test
-        results
+        Make sure RoboBoi properly logs in and gets the connect.sid cookie.
+        Also makes sure that the DatabaseHandler properly saves everything. 
         """
-        pass
-
-    def test_max_threads(self):
-        pass
-
-    def test_custom_events(self):
-        pass
-
-    def test_custom_callbacks(self):
-        pass
-
-    def test_result_tracking(self):
-        pass
-
-    def test_stops(self):
-        pass
-    
-    def test_waits(self):
-        pass
-
 
 if __name__ == "__main__":
     try:
-        test = DatabaseHandlerTest()
-        test.setup()
-        events = EventManager(3)
+        db_test = DatabaseHandlerTest()
+        db_test.setup()
         os.remove("text_nowAPI.sqlite3")
     except Exception as e:
         print(e)

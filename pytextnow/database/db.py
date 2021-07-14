@@ -53,7 +53,7 @@ class BaseDatabaseHandler(object):
             "users": {
                 'db_id': "INTEGER",
                 'username': "TEXT",  # UNCOMMON
-                "sid": "TEXT",  # UNCOMMON
+                'password': "TEXT", # ENCRYPT ME
                 "object_type": "INTEGER"  # 3
             },
             "contacts": {
@@ -373,11 +373,11 @@ class BaseDatabaseHandler(object):
                 return map_to_class(results)[0].__class__
             elif return_raw:
                 return results
+            # No results, return the empty list
             elif len(dicts) == 0:
                 # print("Empty results")
                 return dicts
             elif return_results:
-                # Map results to Results object  if len > 1
                 return Container(
                     map_to_class(
                         data_dicts=dicts,
@@ -509,7 +509,7 @@ class DatabaseHandler(BaseDatabaseHandler):
     def get_all_users(self):
         return self._execute_sql("SELECT * FROM users;", return_results=True)
 
-    def create_user(self, data: typing.Dict[str, str]) -> User:
+    def create_user(self, data: typing.Dict[str, str], return_mapped=True) -> User:
         """
         Take in a dictionary where the keys are the fields
         and their values are the values to be inserted into
@@ -524,9 +524,12 @@ class DatabaseHandler(BaseDatabaseHandler):
             the values to insert into the corresponding columns
         :return: User object
         """
-        return self._create_record(self.get_table_name('User'), data)
+        return self._create_record(
+            self.get_table_name('User'), data,
+            return_mapped=return_mapped
+        )
 
-    def get_user(self, username: str = None) -> typing.Union[User, None]:
+    def get_user(self, username: str) -> typing.Union[User, None]:
         """
         Get the sid from the USER_SID table that corresponds
         to the given username or, if it's the only sid that exists,
@@ -539,7 +542,7 @@ class DatabaseHandler(BaseDatabaseHandler):
         if container_obj:
             # print(f'container val: {container_obj}\ntype: {type(container_obj)}')
             return container_obj.first()
-        return
+        return container_obj
 
     def update_user(self, db_id, new_data: typing.Dict[str, str]) -> typing.Union[User, None]:
         """
@@ -552,7 +555,13 @@ class DatabaseHandler(BaseDatabaseHandler):
         """
         return self._update_obj(self.get_table_name('User'), db_id, new_data)
 
-    def user_exists(self, username: str = None, sid: str = None, return_user: bool = False) -> typing.Union[bool, User]:
+    def user_exists(
+            self,
+            username: str = None,
+            sid: str = None,
+            return_all: bool = False,
+            return_user: bool = False
+        ) -> typing.Union[bool, User]:
         """
         Return True/False if user exists in db
         """
@@ -568,6 +577,10 @@ class DatabaseHandler(BaseDatabaseHandler):
         results = self.filter(
             self.get_table_name('User'), {field: value}
         )
+        if return_all:
+            return results
+        if return_user:
+            return results.first()
         return len(results) > 0
 
     def delete_user(self, db_id: int) -> None:
