@@ -13,10 +13,11 @@ import typing
 class BaseDatabaseHandler(object):
     # CRUD
     def __init__(
-            self, db_name: str = "textnow_API.sqlite3",
+            self, db_name: str = None
             schema: typing.Dict[str, typing.Dict[str, str]] = {},
             uneven_classes=True, main_handler= False
     ) -> None:
+        if not db_name: db_name = os.path.expanduser("~/.textnow.sqlite3")
         self.__database = sqlite3.connect(db_name)
         self.__cursor = self.__database.cursor()
         # In case we want to change the database at somepoint
@@ -498,7 +499,7 @@ class DatabaseHandler(BaseDatabaseHandler):
     High level API for database interactions
     """
 
-    def __init__(self, main_handler=False, schema=None, db_name="text_nowAPI.sqlite3") -> None:
+    def __init__(self, main_handler=False, schema=None, db_name=None) -> None:
 
         super(DatabaseHandler, self).__init__(
             main_handler=main_handler,

@@ -22,7 +22,7 @@ class Client:
     def __init__(
             self, username: str = None,
             schema: str = None,
-            db_name: str = "text_nowAPI.sqlite3",
+            db_name: str = None,
             debug: bool = False
         ):
         print("\n\nCreating DatabaseHandler Instance\n\n")
