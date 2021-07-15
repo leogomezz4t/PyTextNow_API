@@ -1,10 +1,10 @@
 import time
-from TN_objects.contact import Contact
-from TN_objects.message import Message
-from TN_objects.container import Container
-from TN_objects.multi_media_message import MultiMediaMessage
-from TN_objects.user import User
-from tools.constants import *
+from pytextnow.TN_objects.contact import Contact
+from pytextnow.TN_objects.message import Message
+from pytextnow.TN_objects.container import Container
+from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
+from pytextnow.TN_objects.user import User
+from pytextnow.tools.constants import *
 
 
 def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False):

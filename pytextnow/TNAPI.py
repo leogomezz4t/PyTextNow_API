@@ -8,16 +8,14 @@ from datetime import datetime, time
 
 import requests
 
-from TN_objects.contact import Contact
-from TN_objects.container import Container
-from TN_objects.error import FailedRequest, InvalidEvent
-from TN_objects.message import Message
-from TN_objects.multi_media_message import MultiMediaMessage
-from TN_objects.comms import Handler as api
-from database.db import DatabaseHandler
-from tools.constants import *
-from tools.robot import RoboBoi
-
+from pytextnow.TN_objects.contact import Contact
+from pytextnow.TN_objects.container import Container
+from pytextnow.TN_objects.error import FailedRequest, InvalidEvent
+from pytextnow.TN_objects.message import Message
+from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
+from pytextnow.database.db import DatabaseHandler
+from pytextnow.tools.constants import *
+from pytextnow.tools.robot import RoboBoi
 
 class CellPhone:
     """
@@ -29,7 +27,7 @@ class CellPhone:
     def __init__(
             self, username: str = None,
             schema: str = None,
-            db_name: str = "text_nowAPI.sqlite3",
+            db_name: str = None,
             debug: bool = False,
             # Enable dev tools
             low_level: bool = False,

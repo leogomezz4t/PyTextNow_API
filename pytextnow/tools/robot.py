@@ -6,11 +6,12 @@ import threading
 import time
 from undetected_chromedriver.v2 import ChromeOptions, Chrome
 
-from database.db import DatabaseHandler
-from TN_objects.user import User
-from server.app import Listener
-from tools.constants import *
-import settings
+from pytextnow.database.db import DatabaseHandler
+from pytextnow.TN_objects.user import User
+from pytextnow.server.app import Listener
+from pytextnow.tools.constants import *
+import pytextnow.settings
+
 class RoboBoi(object):
 
     def __init__(self, proxy=None, start=True) -> None:
