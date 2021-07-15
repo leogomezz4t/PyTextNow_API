@@ -1,4 +1,4 @@
-from pytextnow.message import Message
+from pytextnow.TN_objects.message import Message
 from pytextnow.tools.constants import MULTIMEDIA_MESSAGE_TYPE
 import json
 
