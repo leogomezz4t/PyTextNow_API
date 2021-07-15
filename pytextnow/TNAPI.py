@@ -1,3 +1,4 @@
+from playsound import playsound
 import atexit
 import datetime as dt
 import json
@@ -16,35 +17,39 @@ from pytextnow.database.db import DatabaseHandler
 from pytextnow.tools.constants import *
 from pytextnow.tools.robot import RoboBoi
 
-
-class Client:
+class CellPhone:
+    """
+    TODO: Completely move all technical settings to config.py
+    Interaction object; Responsible for being the main process
+    that controls the database handlers, EventListeners, etc.
+    """
     # Allow empty username for choosing which account to use
     def __init__(
             self, username: str = None,
             schema: str = None,
             db_name: str = None,
-            debug: bool = False
+            debug: bool = False,
+            # Enable dev tools
+            low_level: bool = False,
+            stay_alive: bool = True
         ):
         print("\n\nCreating DatabaseHandler Instance\n\n")
+        self.__await_result_timeout = 30
+        self.stay_alive = stay_alive
         self.__db_handler = DatabaseHandler(
                 schema=schema, db_name=db_name,
                 main_handler=True
             )
         # Start event loop
         print("\n\nCreating RoboBoi Instance...\n\n")
-        self.__robo_boi = RoboBoi()
+        self.__robo_boi = RoboBoi(low_level=low_level, start=False)
         self.__user = self.__get_user_object(username)
-        self.cookies = {
-            'connect.sid': self.__user.sid
-        }
-        # At this point, is there any use for this?
-        #self.allowed_events = self.events.registered_events
-        self.headers = {
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/88.0.4324.104 Safari/537.36 '
-        }
-        self.session = requests.session()
-        #atexit.register(self.on_exit)
+        self.__robo_boi._start()
+        self.__api_handler = ApiHandler(self.__user)
+        atexit.register(self.exit)
+        if stay_alive:
+            self.start_listening()
+        self.text_tone = ""
 
     def __get_user_object(self, username):
         user = None
@@ -132,8 +137,8 @@ class Client:
             req = self.session.get(
                 "https://www.textnow.com/api/users/"
                 + self.__user.username
-                + f"/messages?contact_value="
-                  f"{contact.number}&start_message_id=99999999999999&direction=past&page_size=200&get_archived=1",
+                + "/messages?contact_value="
+                + "%s&start_message_id=99999999999999&direction=past&page_size=%s&get_archived=1" % (contact.number),
                 headers=self.headers, cookies=self.cookies)
 
             # Change user sid if it's changed
@@ -146,6 +151,9 @@ class Client:
             else:
                 self.request_handler(req.status_code)
         return all_messages
+
+    def get_rec_sms(self, per_page):
+        self.__get_sms(per_page)
 
     def get_sent_messages(self):
         """
@@ -304,15 +312,65 @@ class Client:
                     continue
                 return filtered[0]
 
-    def on(self, event: str):
-        if event not in self.allowed_events:
-            raise InvalidEvent(event)
-
-        def deco(func):
-            self.events.append([event, func])
-
-        return deco
-
     @staticmethod
     def request_handler(status_code: int):
         raise FailedRequest(str(status_code))
+
+    def start_listening(self):
+        """
+        Start listnening to the browser to see if there are
+        any new sms/mms. Possibly missed calls?
+        """
+        print("...Starting to listen for new things...")
+        self.get_new_sms(self)
+        self.get_new_mms(self)
+
+    def get_new_sms(self, from_=None):
+        """
+        NOTE: This is ONLY called when the event listener hears something
+        TODO: Allow getting new messages from a specific person
+        """
+        newest_id = self.__db_handler._execute_sql(
+            "SELECT max (db_id) FROM '%s'" % (
+                self.__db_handler.get_table_name("Message")
+            )
+        ).first().id
+        # Query for all messages starting from the newest id we
+        # have on record
+        req = self.session.get(
+                "https://www.textnow.com/api/users/"
+                + self.__user.username
+                + "/messages?contact_value=%s"
+                + "&start_message_id=%s"
+                + "&direction=past"
+                + "&page_size=%s"
+                + "&get_archived=1" % (
+                    from_.number, newest_id, self.page_size
+                ),
+                headers=self.headers, cookies=self.cookies)
+        return ApiHandler.process_response(req)
+    
+    def await_result(self, func_name, fail_silently=False):
+        result = self.__api_handler.results.get(func_name, None)
+        if not result:
+            # Threading could have changed the value. check again
+            result = self.__api_handler.results.get(func_name, None)
+            # Ensure we don't go passed the timeout
+            start = time.time()
+            while not result:
+                result = self._api_handler.results.get(func_name, None)
+                if result:
+                    return result
+                if time.time() - start >= self.__await_result_timeout:
+                    if not fail_silently:
+                        raise Exception(
+                            "\n\nCellPhone timed out while waiting for the ApiHandler to "
+                            "finish executing '%s'.\n\n!!!Make sure your internet is connected!!!\n"
+                            "If your internet is slow, you may have to raise the timeout limit!" 
+                        )
+                    else:
+                        print(
+                            "\n\n!!!WARNING!!! CellPhone timed out while "
+                            + "awaiting the result of %s" % (func_name)
+                        )
+                    

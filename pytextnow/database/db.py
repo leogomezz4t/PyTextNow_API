@@ -507,13 +507,11 @@ class DatabaseHandler(BaseDatabaseHandler):
             db_name=db_name
         )
 
-    # High Level Helper Methods
-
-    # Usernames & SID
     def get_all_users(self):
         users = self._execute_sql("SELECT * FROM users;", return_results=True)
         print(users)
         return users
+
     def create_user(self, data: typing.Dict[str, str], return_mapped=True) -> User:
         """
         Take in a dictionary where the keys are the fields
@@ -634,6 +632,12 @@ class DatabaseHandler(BaseDatabaseHandler):
         self._delete_obj(self.get_table_name("Contact"), db_id)
 
     # SMS
+    def get_newest_sms(self):
+        return self._execute_sql(
+            "SELECT max (id) FROM '%s'" % (
+                self.get_table_name("Message")
+            )
+        ).first()
 
     def create_sms(self, data):
         self._create_record(self.get_table_name('Message'), data)
