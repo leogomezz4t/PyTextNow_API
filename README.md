@@ -8,6 +8,7 @@
 - Please tell me if you have any ideas for the API or reporting a bug
 
 ## Installation
+### NOTE: Chrome (or at least Chromium) MUST be installed on your system. You will get cryptic errors otherwise!
 #### Method One: ***Using git clone***
 ```bash
 git clone https://github.com/leogomezz4t/PyTextNow_API
@@ -16,8 +17,7 @@ git clone https://github.com/leogomezz4t/PyTextNow_API
 ```bash
 pip install PyTextNow
 ```
-*Note: If there is an unexplained error with the pip install, try adding the **--user** flag to it.*
-
+*Note: If there is a permissions error with the pip install, try installing with **sudo** or by adding the **--user** flag to it.*
 
 
 ## Usage
