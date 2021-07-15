@@ -1,5 +1,5 @@
 from .message import Message
-from ..tools.constants import MULTIMEDIA_MESSAGE_TYPE
+from tools.constants import MULTIMEDIA_MESSAGE_TYPE
 import json
 
 

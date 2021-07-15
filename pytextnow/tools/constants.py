@@ -52,8 +52,8 @@ TABLE_ATTRS = {
                     'db_id'
             ],
             "User": [
-                'sid',
                 'username',
+                'password',
                 'object_type',
                 'db_id'
             ],

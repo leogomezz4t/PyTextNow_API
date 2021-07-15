@@ -50,3 +50,7 @@ class Container(list):
         """
         # This may not work
         return datetime.datetime.strptime(string)
+
+    @property
+    def length(self):
+        return len(self.item_list)

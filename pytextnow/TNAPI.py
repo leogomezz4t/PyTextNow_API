@@ -7,14 +7,14 @@ from datetime import datetime, time
 
 import requests
 
-from pytextnow.TN_objects.contact import Contact
-from pytextnow.TN_objects.container import Container
-from pytextnow.TN_objects.error import FailedRequest, InvalidEvent
-from pytextnow.TN_objects.message import Message
-from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
-from pytextnow.database.db import DatabaseHandler
-from pytextnow.tools.constants import *
-from pytextnow.tools.robot import RoboBoi
+from TN_objects.contact import Contact
+from TN_objects.container import Container
+from TN_objects.error import FailedRequest, InvalidEvent
+from TN_objects.message import Message
+from TN_objects.multi_media_message import MultiMediaMessage
+from database.db import DatabaseHandler
+from tools.constants import *
+from tools.robot import RoboBoi
 
 
 class Client:
@@ -22,30 +22,36 @@ class Client:
     def __init__(
             self, username: str = None,
             schema: str = None,
-            db_name: str = "text_nowAPI.sqlite3"
+            db_name: str = "text_nowAPI.sqlite3",
+            debug: bool = False
         ):
-        self._username = username
-        self.__db_handler = DatabaseHandler(schema=schema, db_name=db_name)
+        print("\n\nCreating DatabaseHandler Instance\n\n")
+        self.__db_handler = DatabaseHandler(
+                schema=schema, db_name=db_name,
+                main_handler=True
+            )
         # Start event loop
+        print("\n\nCreating RoboBoi Instance...\n\n")
         self.__robo_boi = RoboBoi()
         self.__user = self.__get_user_object(username)
         self.cookies = {
             'connect.sid': self.__user.sid
         }
-        self.allowed_events = self.events.registered_events
+        # At this point, is there any use for this?
+        #self.allowed_events = self.events.registered_events
         self.headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/88.0.4324.104 Safari/537.36 '
         }
         self.session = requests.session()
-        atexit.register(self.on_exit)
+        #atexit.register(self.on_exit)
 
-    def __get_user_object(self, username=None):
+    def __get_user_object(self, username):
         user = None
         if username:
             # Try to get the user with the DB Handler
             # This will be None if the user is not found.
-            user = self.__db_handler.get_user(username)
+            user = self.__db_handler.get_user(self.__user.username)
         if not user:
             # Have the user choose an account. Log in and assign the sid
             user = self.__robo_boi.choose_account(assign_sid=True)
@@ -125,7 +131,7 @@ class Client:
             # Send get for 200 contacts per page
             req = self.session.get(
                 "https://www.textnow.com/api/users/"
-                + self._username
+                + self.__user.username
                 + f"/messages?contact_value="
                   f"{contact.number}&start_message_id=99999999999999&direction=past&page_size=200&get_archived=1",
                 headers=self.headers, cookies=self.cookies)
@@ -206,11 +212,15 @@ class Client:
 
                 place_file_req = self.session.put(file_url_holder, data=raw, headers=headers_place_file,
                                                   cookies=self.cookies)
-                file_req_sid = place_file_req.cookies['connect.sid']
+                sid = place_file_req.cookies.get('connect.sid')
+                
                 # Refresh the page after sending (Possibly not needed)
                 self.session.get(place_file_req.url)
-                if file_req_sid != self.__user.sid:
-                    self.__reset_sid(sid=file_req_sid, auto_rotating=True, method="send_mms() After PUT request")
+                browser_sid = self.__robo_boi.get_sid(self.__user, False)
+                if sid != self.__user.sid:
+                    if sid != browser_sid:
+                        sid = browser_sid
+                    self.__reset_sid(sid=sid, auto_rotating=True,  method="send_mms() After PUT request")
 
                 if str(place_file_req.status_code).startswith("2"):
 
@@ -218,7 +228,7 @@ class Client:
                         "contact_value": to,
                         "contact_type": 2, "read": 1,
                         "message_direction": 2, "message_type": msg_type,
-                        "from_name": self._username,
+                        "from_name": self.__user.username,
                         "has_video": has_video,
                         "new": True,
                         "date": datetime.now().isoformat(),
@@ -247,24 +257,29 @@ class Client:
                     "read":1,
                     "message_direction":2,
                     "message_type":1,
-                    "from_name": self._username,
+                    "from_name": self.__user.username,
                     "has_video": False,
                     "new": True,
                     "date": datetime.now().isoformat()
                     }
             }
-
-        response = self.session.post('https://www.textnow.com/api/users/' + self._username + '/messages',
+        print("\n\nSending text message to", to, "\n\n")
+        response = self.session.post('https://www.textnow.com/api/users/' + self.__user.username + '/messages',
                                      headers=self.headers, cookies=self.cookies, json=data["json"])
         # Refresh after post
         self.session.get(response.url)
         # Check sid again
-        new_sid = response.cookies['connect.sid']
-        if new_sid != self.__user.sid:
-            self.__reset_sid(sid=new_sid, auto_rotating=True, method="send_sms() After POST request")
+        browser_sid = self.__robo_boi.get_sid(self.__user, False)
+        sid = response.cookies['connect.sid']
+        if sid != self.__user.sid:
+            sid = sid
+            if sid != browser_sid:
+                sid = browser_sid
+            self.__reset_sid(sid=sid, auto_rotating=True, method="send_sms() After POST request")
 
         if not str(response.status_code).startswith("2"):
             self.request_handler(response.status_code)
+        print("Response: ", json.dumps(response.json(), indent=4))
         return response
 
     def wait_for_response(self, number, timeout_bool=True):

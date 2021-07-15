@@ -1,3 +1,4 @@
+from TNAPI import Client
 import random
 import os
 import secrets
@@ -31,7 +32,7 @@ class DatabaseHandlerTest:
                 'id': []
             },
             "users": {
-                'sid': [],
+                'password': [],
                 "username": [],
                 'db_id': []
             },
@@ -81,14 +82,14 @@ class DatabaseHandlerTest:
             for name in usernames.readlines():
                 name = name.strip("\n")
                 name = name.strip()
-                sid = secrets.token_hex(16)
-                self.test_data['users']['sid'].append(sid)
+                password = secrets.token_hex(16)
+                self.test_data['users']['password'].append(password)
                 self.test_data['users']['username'].append(name)
                 if self.db_handler.user_exists(name):
                     print("User exists")
                     pass
                 if not self.db_handler.user_exists(name):
-                    self.db_handler.create_user({'username': name, 'sid': sid, 'object_type': USER_TYPE})
+                    self.db_handler.create_user({'username': name, 'password': password, 'object_type': USER_TYPE})
         users = self.db_handler.get_all_users()
         # Should be 88 lines
         assert len(users) > 87
@@ -311,31 +312,30 @@ class DatabaseHandlerTest:
             line.strip(i)
         return line
 
-class PythonApiTest(object):
-    """
-    Test to make sure the various API methods (send_sms, etc.)
-    all work as expected
-    """
-
+class ClientTest(object):
     def __init__(self) -> None:
-        self.setup()
-        self.test_login()
-        self.test_sending()
-        self.test_recieving()
-        super().__init__()
-    
-    def test_login():
-        """
-        Make sure RoboBoi properly logs in and gets the connect.sid cookie.
-        Also makes sure that the DatabaseHandler properly saves everything. 
-        """
+        # Test RoboBoi.choose_account(), and DB setup right away
+        print("\n\nInstantiating Client. Tests DB handler & robot\n\n")
+        self.client = Client(debug=True)
+        # Test sms
+        print("All objects created successfully, starting tests...")
+        self.test()
+
+    def test(self):
+        print("...Testing sms...")
+        num = input("Number: ")
+        self.client.send_sms(num, input("Message: "))
+        print("...Testing mms...")
+        file_path = input("Enter path to file: ")    
+        self.client.send_mms(num, file_path)
+        print("All good!")
 
 if __name__ == "__main__":
     try:
-        db_test = DatabaseHandlerTest()
+        db_test = ClientTest()
         db_test.setup()
-        os.remove("text_nowAPI.sqlite3")
+       # os.remove("text_nowAPI.sqlite3")
     except Exception as e:
         print(e)
-        os.remove("text_nowAPI.sqlite3")
+       # os.remove("text_nowAPI.sqlite3")
         raise e

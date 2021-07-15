@@ -1,10 +1,10 @@
-from ..TN_objects.container import Container
-from ..TN_objects.message import Message
-from ..TN_objects.multi_media_message import MultiMediaMessage
-from ..TN_objects.contact import Contact
-from ..TN_objects.user import User
-from ..tools.constants import *
-from ..tools.utils import map_to_class
+from TN_objects.container import Container
+from TN_objects.message import Message
+from TN_objects.multi_media_message import MultiMediaMessage
+from TN_objects.contact import Contact
+from TN_objects.user import User
+from tools.constants import *
+from tools.utils import map_to_class
 
 import sqlite3
 import typing
@@ -15,7 +15,7 @@ class BaseDatabaseHandler(object):
     def __init__(
             self, db_name: str = "textnow_API.sqlite3",
             schema: typing.Dict[str, typing.Dict[str, str]] = {},
-            uneven_classes=True
+            uneven_classes=True, main_handler= False
     ) -> None:
         self.__database = sqlite3.connect(db_name)
         self.__cursor = self.__database.cursor()
@@ -64,14 +64,15 @@ class BaseDatabaseHandler(object):
             },
         }
         self.__tables = schema if schema else self.__default_tables
-        self.__create_tables()
+        if main_handler:
+            print("\n\nCreating Tables...\n\n")
+            self.__create_tables()
         self.__table_names = self.__assign_table_names()
 
     def _create_record(
             self, table_name: str,
-            info: typing.Dict[str, str],
-            return_mapped: typing.Optional[bool] = True,
-    ) -> None:
+            info: typing.Dict[str, str]
+        ) -> None:
         if info.get('db_id', None):
             raise Exception(
                 "WARNING: Do not pass an DB_ID when creating an object "
@@ -92,14 +93,12 @@ class BaseDatabaseHandler(object):
         sql = "INSERT INTO %s (%s) VALUES %s;" % (
             table_name, safe_columns, tuple(safe_values)
         )
-        if return_mapped:
-            return self._execute_sql(sql, commit=True, return_results=True)
-        self._execute_sql(sql, commit=True)
+        return self._execute_sql(sql, commit=True, return_results=True)
 
     def filter(
             self, table_name: str,
             filters: typing.Dict[str, typing.Union[str, int, bool]]
-    ) -> Container:
+        ) -> Container:
         """
         Filter a table based on the given parameters
         
@@ -335,7 +334,7 @@ class BaseDatabaseHandler(object):
             return_class: bool = False,
             return_raw: bool = False, return_results: bool = True,
             commit: bool = False
-    ):
+        ):
         """
         A wrapper to execute any SQL. This is used to keep from
         having connections and such scattered through the class
@@ -499,16 +498,21 @@ class DatabaseHandler(BaseDatabaseHandler):
     High level API for database interactions
     """
 
-    def __init__(self, schema=None, db_name="text_nowAPI.sqlite3") -> None:
+    def __init__(self, main_handler=False, schema=None, db_name="text_nowAPI.sqlite3") -> None:
 
-        super(DatabaseHandler, self).__init__(schema=schema, db_name=db_name)
+        super(DatabaseHandler, self).__init__(
+            main_handler=main_handler,
+            schema=schema,
+            db_name=db_name
+        )
 
     # High Level Helper Methods
 
     # Usernames & SID
     def get_all_users(self):
-        return self._execute_sql("SELECT * FROM users;", return_results=True)
-
+        users = self._execute_sql("SELECT * FROM users;", return_results=True)
+        print(users)
+        return users
     def create_user(self, data: typing.Dict[str, str], return_mapped=True) -> User:
         """
         Take in a dictionary where the keys are the fields
@@ -517,7 +521,7 @@ class DatabaseHandler(BaseDatabaseHandler):
         NOTE: Both fields are required in the user_sids table
         example dict:{
                         "username": "some username",
-                        "sid": "some sid"
+                        "password": "some password"
                     }
 
         :param data: Dictionary whose keys are fields and values are
@@ -525,8 +529,7 @@ class DatabaseHandler(BaseDatabaseHandler):
         :return: User object
         """
         return self._create_record(
-            self.get_table_name('User'), data,
-            return_mapped=return_mapped
+            self.get_table_name('User'), data
         )
 
     def get_user(self, username: str) -> typing.Union[User, None]:

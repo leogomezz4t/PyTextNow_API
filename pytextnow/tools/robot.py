@@ -4,36 +4,42 @@ import getpass
 import typing
 import threading
 import time
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from undetected_chromedriver.v2 import ChromeOptions, Chrome
 
-from pytextnow.database.db import DatabaseHandler
-from pytextnow.TN_objects.user import User
+from database.db import DatabaseHandler
+from TN_objects.user import User
+from tools.constants import USER_TYPE
 
 class RoboBoi(object):
 
-    def __init__(self, start_listening=True) -> None:
+    def __init__(self) -> None:
+        self.__wait_thread_running = False
+        self.__timeout = 30
+        self.__wait_msg = "Please wait..."
+        self.__debug = True
         self.__MINUTE = 60
         self.__HOUR = self.__MINUTE * 60
         self.__DAY = self.__HOUR * 24
         self.__ONE_HOUR = 60*60*60
         self.__start_time = time.time()
-        self.__last_refresh = time.time
+        self.__last_refresh = 0
         self.__working = False
-        self.__db_handler = DatabaseHandler()
+        print("\n\nCreating DatabaseHandler for RoboBoi...\n\n")
+        self.__db_handler = DatabaseHandler(main_handler=False)
         self.__driving = False
-        self.__driver = self.configure()
+        self.__driver = self.__configure()
+        self.__lock = threading.Lock()
         # Start the browser and keep it running
-        threading.Thread(target=self.__drive(), daemon=True).start()
+        threading.Thread(target=self.__drive, daemon=True).start()
+        self.__feedback_wait = False
         self.__plz_wait = threading.Thread(
             target=self.__please_wait,
             daemon=True
         )
-        self.__feedback_wait = False
     
     def __drive(self):
+        self.__driving = True
+        print("\n\nStarting to drive the robot...")
         with self.__driver:
             next_refresh = random.uniform(self.__ONE_HOUR, self.__DAY)
             # Leave chrome running to keep the sid from changing (Valid for a month from last refresh)
@@ -43,18 +49,20 @@ class RoboBoi(object):
                     next_refresh = random.uniform(self.__ONE_HOUR, self.__DAY)
                     self.__refresh()
         end = time.time() - self.__start_time / self.__MINUTE
-        print("Closed browser...We've been driving the browser for {} minutes" % (end))
+        print("Closed browser...We've been driving the browser for {} minutes" % (str(end)))
 
     def __configure(self):
         """
         Configure the chrome browser to run headless
         """
         options = ChromeOptions()
-        options.headless = True
-        options.add_argument('--headless')
+       # Don't run headless if in debug mode
+        if not self.__debug:
+            options.add_argument('--headless')
+            # Might cause detection due to shader testing
+            options.add_argument('--disable-gpu')
         options.add_argument('--disable-extensions')
-        # Might cause detection due to shader testing
-        options.add_argument('--disable-gpu')
+
         return Chrome(options=options)
     
     def get_sid(self, user=None, from_login=True) -> str:
@@ -74,13 +82,9 @@ class RoboBoi(object):
                 return self.get_sid(user, True)
         # No user was provided, make the user choose an account
         if not user:
-            user = self.choose_account(user)
-        self.working = True
-        # Give feedback while we log in
-        self.__plz_wait.start()
+            user = self.choose_account()
+        self.__wait_msg = "Please wait while we log in..."
         self.__login(user)
-        # Stop the feedback, we're done
-        self.__working = False
         return self.__driver.get_cookie('connect.sid').get('value')
 
     def __please_wait(self, message="Working...") -> None:
@@ -93,7 +97,7 @@ class RoboBoi(object):
         max_dots = 25
         going_down = False
         going_up = True
-        print(message)
+        print(self.__wait_msg)
         while self.__working:
             # Don't print anything so some output isn't buried
             if self.__feedback_wait:
@@ -112,17 +116,18 @@ class RoboBoi(object):
             elif going_up:
                 print("." * last_dot_amount)
                 last_dot_amount += 1
-            if not self.working:
+            if not self.__working:
                 break
             # Tell them that we're still going every ten seconds
             if self.count % 20 == 0:
                 print("\nStill Working...\n")
             count += 1
             # Don't bury the messages from the program
-            time.sleep(0.5)
+            time.sleep(0.25)
+        self.__wait_thread_running = False
         print("\n\nDone!")
     
-    def choose_account(self, accounts=[], assign_sid=False) -> User:
+    def choose_account(self, assign_sid=False) -> User:
         """
         Return a user object for logging in or general use in the program
         :Args:
@@ -133,70 +138,64 @@ class RoboBoi(object):
         :Returns:
             User object. If assign_sid=False, user.sid will likely be None
         """
-        user = None
-        # First check if the username and password are in the
-        # database
-        accounts = self.__db_handler.get_all_users() if len(accounts) == 0 else accounts
-        # No user exists in the database
-        if len(accounts) == 0:
-            user = self.new_user()
-        elif len(accounts) == 1:
-            user = accounts[0]
-        else:
-            # Multiple users exist in the database, have the user choose one
-            print(
-                "\n\nPlease enter the number associated with the account you'd like to use.\n"
-            )
-            time.sleep(0.5)
-            for idx in range(len(accounts)):
-                print("\n",idx, ":", accounts[idx].username,"\n")
-            chosen_idx = input("\n\nEnter the number next to your desired account: ")
+        users = self.__db_handler.get_all_users()
+        if len(users) == 0:
+            return self.new_user()
+        # I have no idea why this works but len(users) == 1 doesn't
+        if len(users) < 2 and len(users) > 0:
+            return users[0]
+        elif len(users) > 1:
+            for user_idx in range(len(users)):
+                print(user_idx, " : ", users[user_idx].username)
+            chosen_idx = input("Enter the number next to an account: ")
             try:
-                user = accounts[chosen_idx]
+                chosen_idx = int(chosen_idx)
+                user = users[chosen_idx]
             except IndexError:
-                print("\nInvalid Entry!\nPlease enter a number from the list of accounts\n")
-                return self.choose_account(accounts, assign_sid=assign_sid)
-        if assign_sid:
-            # Choosing an account always means login, right?
-            user.sid = self.get_sid(user, from_login=True)
-        return user
+                return self.choose_account(assign_sid)
 
+        if assign_sid:
+            user.sid = self.get_sid(user)
+        return user
+        
     def new_user(
             self, username=None,
-            password=None, return_mapped=True
+            password=None
         ) -> typing.Union[User, None]:
         """
         Get the login credentials from the user and update the database to
         have the new account credentials. If instructed to, return an object
         of the information entered in the database.
         """
+        print("\n\n...Please Provide Login Credentials...\n")
         # We may require input. 'Pause' the thread so it's not buried
         self.__feedback_wait = True
         if not username:
-            username = input("Please enter your username: ")
+            username = getpass.getpass("Please enter your username: ")
         # Don't print what they enter to the console
         if not password:
             password = getpass.getpass("Please enter your password: ")
-        if len(password) or len(username) == 0:
-            filled_field = username if len(username) > 0 else password
+        if len(username) == 0 or len(password) == 0:
             print("Please fill both fields...\n\n")
-            return self.new_user(filled_field)
+            return self.new_user(username, password)
         # Resume the feedback thread
         self.__feedback_wait = False
-        return DatabaseHandler().\
-            create_user({
-                'username': username,
-                "password": password
-            }, return_mapped=return_mapped)
-
-
-    def __sleep(self, lower_limit=0.01, upper_limit=1.0):
-        time.sleep(random.uniform(lower_limit, upper_limit))
+        existing = self.__db_handler.get_user(username)
+        if not existing:
+            self.__db_handler.\
+                create_user({
+                    'username': username,
+                    "password": password,
+                    "object_type": USER_TYPE
+                    })
+            user = self.__db_handler.get_user(username)
+        return user
 
     def __login(self, user):
         """
         Log in to Text Now
         """
+        print("\n\nInside login method:", user)
         def __sucessful_login():
             """
             Make sure we're logged in by looking for the phone number
@@ -205,22 +204,34 @@ class RoboBoi(object):
             Also, if the user doesn't already have it, take that number
             and assign it to their user instance and update it in the database
             """
-            # wait until either the phoneNumber or txt-username tag is loaded
-            WebDriverWait(self.__driver, 0.1).until(
-                lambda elem: elem.find_elements_by_class_name("phoneNumber") or elem.find_elements_by_id("txt-username")
-            )
-            not_logged_in = self.__driver.find_elements_by_id("txt-username")
-            logged_in = self.__driver.find_elements_by_class_name("phoneNumber")
-            if not_logged_in:
-                return False
-            elif logged_in:
-                return len(logged_in) > 0
-            # It's unlikely but possible we end up on an unexpected page (Like a "you're banned" screen)
-            else:
-                self.__driver.save_screenshot("UnexpectedPage.png")
-                raise Exception("!!WARNING: RoboBoi ended on an unexpected page!!!")
+            loading = True
+            logged_in = False
+            print("\n\nWaiting for successfull login verification...\n\n")
+            started = time.time()
+            while loading:
+                try:
+                    number = self.__driver.find_element_by_class_name("phoneNumber")
+                except:
+                    number = None
+                    if time.time() - started % 4 == 0:
+                        print("\n...Still loading...\n")
+                if number:
+                    print("One of the elements loaded!\n\n", number,"\n\n")
+                    loading = False
+                    logged_in = True
+                # Wait for the timeout
+                if time.time() - started >= self.__timeout:
+                    raise Exception("Timed out while waiting for a page to load. "
+                                    "Raise the time out limit or try again."
+                                    "Location: tools/robot.py -> RoboBoi -> __login() --> __successful_login()"
+                                    )
+            print("\n\n",self.__driver.current_url, "\n\n")
+            if logged_in:
+                return True
+            self.__driver.save_screenshot("UnexpectedPage.png")
+            raise Exception("!!!WARNING: RoboBoi ended on an unexpected page!!!")           
 
-        self.__driver.get('https://textnow.com/login')
+        self.get_page('https://textnow.com/login')
         username_field = self.__driver.find_element_by_id('txt-username')
         password_field = self.__driver.find_element_by_id('txt-password')
         username_field.send_keys(user.username)
@@ -230,17 +241,11 @@ class RoboBoi(object):
         self.__driver.find_element_by_id('btn-login').click()
         self.__sleep(0.05, 0.2)
         if __sucessful_login():
+            self.__last_refresh = time.time()
             return
         print("\n\n!!!WARNING: Failed to login!!!\n\n")
         time.sleep(1)
-        try:
-            return self.__driver.save_screenshot("LastSeen.png")
-        except Exception as e:
-            raise Exception(
-                "\n\nI tried to make it graceful but the package said no.\n"
-                "An exception occured: Most likely because self.__driver has no attribute save_screenshot\n\n"
-                "ERROR: %s" % (e)
-            )
+        return self.__driver.save_screenshot("LastSeen.png")
 
     def get_page(self, url):
         """
@@ -255,7 +260,10 @@ class RoboBoi(object):
 
     @property
     def uptime(self):
-        return time.time()
+        return time.time() - self.__start_time
 
-    def time_on_page(self):
+    def __time_on_page(self):
         return time.time() - self.__last_refresh
+
+    def __sleep(self, lower_limit=0.01, upper_limit=1.0):
+        time.sleep(random.uniform(lower_limit, upper_limit))
