@@ -9,6 +9,9 @@ class InvalidFileType(Exception):
 """
 
 
+import typing
+from undetected_chromedriver..
+
 class FailedRequest(Exception):
     def __init__(self, status_code: str):
         self.status_code = status_code
@@ -43,3 +46,48 @@ class InvalidEvent(Exception):
 
     def __str__(self):
         return f"{self.event} is an invalid event."
+
+
+class BaseError(Exception):
+    def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
+        super().__init__(message)
+        self.errors = errors
+        if isinstance(errors, list):
+            print("\n\nERRORS\n\n")
+            for error in errors:
+                print(error)
+        else:
+           print(self.error)
+
+class NetworkError(BaseError):
+    """
+    Error describing some sort of unexpected network issue like
+    disconnecting or if the Listener server fails and exits.
+    """
+    def __init__(
+        self, message: str,
+        errors: typing.Union[list, str],
+        proxy=None, vpn=None, port=settings.DEDAULT_LISTENER_PORT
+        ) -> None:
+        super().__init__(message, errors)
+
+class BrowserError(BaseError):
+    def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
+        super().__init__(message, errors)
+    
+class ApiError(BaseError):
+    def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
+        super().__init__(message, errors)
+
+class ListenerError(BaseError):
+    def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
+        super().__init__(message, errors)
+
+class DatabaseHandlerError(BaseError):
+    def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
+        super().__init__(message, errors)
+
+class RobotError(BaseError):
+    def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
+        super().__init__(message, errors)
+

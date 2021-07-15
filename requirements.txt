@@ -1,7 +1,13 @@
 certifi==2021.5.30
 chardet==4.0.0
+click==8.0.1
 Faker==8.8.2
+Flask==2.0.1
 idna==2.10
+itsdangerous==2.0.1
+Jinja2==3.0.1
+MarkupSafe==2.0.1
+playsound==1.2.2
 python-dateutil==2.8.1
 requests==2.25.1
 selenium==3.141.0
@@ -10,3 +16,4 @@ text-unidecode==1.3
 undetected-chromedriver==3.0.2
 urllib3==1.26.5
 websockets==9.1
+Werkzeug==2.0.1

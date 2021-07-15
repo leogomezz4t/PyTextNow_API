@@ -8,19 +8,20 @@ from undetected_chromedriver.v2 import ChromeOptions, Chrome
 
 from database.db import DatabaseHandler
 from TN_objects.user import User
-from tools.constants import USER_TYPE
-
+from server.app import Listener
+from tools.constants import *
+import settings
 class RoboBoi(object):
 
-    def __init__(self) -> None:
+    def __init__(self, proxy=None, start=True) -> None:
+        self.__proxy = proxy
+        # What table needs updated
+        self.to_be_updated = []
+        self.__server = None
         self.__wait_thread_running = False
-        self.__timeout = 30
         self.__wait_msg = "Please wait..."
-        self.__debug = True
-        self.__MINUTE = 60
-        self.__HOUR = self.__MINUTE * 60
-        self.__DAY = self.__HOUR * 24
-        self.__ONE_HOUR = 60*60*60
+        self.__debug = settings.DEBUG
+
         self.__start_time = time.time()
         self.__last_refresh = 0
         self.__working = False
@@ -28,32 +29,66 @@ class RoboBoi(object):
         self.__db_handler = DatabaseHandler(main_handler=False)
         self.__driving = False
         self.__driver = self.__configure()
-        self.__lock = threading.Lock()
+        self.__r_lock = threading.RLock()
         # Start the browser and keep it running
-        threading.Thread(target=self.__drive, daemon=True).start()
         self.__feedback_wait = False
-        self.__plz_wait = threading.Thread(
-            target=self.__please_wait,
-            daemon=True
-        )
+        # Not using it, don't waste the resources
+        #self.__plz_wait = threading.Thread(
+         #   target=self.__please_wait,
+          #  daemon=True
+        #)
+        if start:
+            self.start()
     
+    def start(self):
+        # Start the thread to keep chrome open
+        threading.Thread(target=self.__drive, daemon=True).start()
+        # Start the server thread
+        self.__server = Listener()
+        self.__server.start()
+
     def __drive(self):
         self.__driving = True
         print("\n\nStarting to drive the robot...")
         with self.__driver:
-            next_refresh = random.uniform(self.__ONE_HOUR, self.__DAY)
+            next_refresh = random.uniform(settings.REFRESH_INTERVALS['lower'], settings.REFRESH_INTERVALS['upper'])
             # Leave chrome running to keep the sid from changing (Valid for a month from last refresh)
             while self.__driving:
-                # Refresh the page every 1 to 24 hours
-                if self.__time_on_page() > next_refresh:
-                    next_refresh = random.uniform(self.__ONE_HOUR, self.__DAY)
-                    self.__refresh()
+                try:
+                    # Refresh the page every 1 to 24 hours
+                    if self.__time_on_page() > next_refresh:
+                        next_refresh = random.uniform(self.__ONE_HOUR, self.__DAY)
+                        self.__refresh()
+                except:
+                    print("The Driver Experienced and exception some how...")
+                    break
+                # Check for new things
+                with self.__r_lock:
+                    new = self.__server.get_new()
+                    if len(new) > 0:
+                        if len(self.to_be_updated) > 0:
+                            print(
+                                "\n\n!!!WARNING!!!\n\n You have not cleared the 'RoboBoi.to_be_updated"
+                                " list. Be sure you pay attention to execution order. This may get hard to debug!"
+                            )
+                        # Check for new things
+                        self.to_be_updated = new
         end = time.time() - self.__start_time / self.__MINUTE
+        self.__sigkill()
         print("Closed browser...We've been driving the browser for {} minutes" % (str(end)))
+
+    def get_new(self):
+        with self.__r_lock:
+            must_update = self.to_be_updated.copy()
+            self.to_be_updated.clear()
+            return must_update
 
     def __configure(self):
         """
-        Configure the chrome browser to run headless
+        Configure the chrome browser to run headless as well as a few performance
+        and stealth options.
+
+        TODO: Integrate user agent switching and total browser Anonymity
         """
         options = ChromeOptions()
        # Don't run headless if in debug mode
@@ -61,6 +96,14 @@ class RoboBoi(object):
             options.add_argument('--headless')
             # Might cause detection due to shader testing
             options.add_argument('--disable-gpu')
+            options.add_argument('--disable-permissions-bubbles')
+            options.add_argument("--disable-save-password-bubbles")
+            options.add_argument('--disable-session-crashed-bubble')
+            # Run in guest mode (No addons, sync, bookmarks, etc.)
+            options.add_argument("--bwsi")
+            #options.add_argument('--incognito')
+        if self.__proxy:
+            options.add_argument("--proxy-server=%s" % self.__proxy)
         options.add_argument('--disable-extensions')
 
         return Chrome(options=options)
@@ -77,9 +120,11 @@ class RoboBoi(object):
             The value of the connect.sid cookie in the currently open browser
         """
         if not from_login:
+            sid = self.__driver.get_cookie('connect.sid')
             # We must have been kicked off, log back in
-            if not self.__driver.get_cookie('connect.sid').get('value', None):
+            if not sid:
                 return self.get_sid(user, True)
+            return sid
         # No user was provided, make the user choose an account
         if not user:
             user = self.choose_account()
@@ -138,13 +183,15 @@ class RoboBoi(object):
         :Returns:
             User object. If assign_sid=False, user.sid will likely be None
         """
+        user = None
         users = self.__db_handler.get_all_users()
         if len(users) == 0:
-            return self.new_user()
-        # I have no idea why this works but len(users) == 1 doesn't
-        if len(users) < 2 and len(users) > 0:
+            user = self.new_user()
+        # Don't get the user if we already have it
+        if len(users) < 2 and len(users) > 0 and not user:
             return users[0]
-        elif len(users) > 1:
+        # Don't get the user if we already have it
+        elif len(users) > 1 and not user:
             for user_idx in range(len(users)):
                 print(user_idx, " : ", users[user_idx].username)
             chosen_idx = input("Enter the number next to an account: ")
@@ -153,7 +200,7 @@ class RoboBoi(object):
                 user = users[chosen_idx]
             except IndexError:
                 return self.choose_account(assign_sid)
-
+        # Get the sid if we need to
         if assign_sid:
             user.sid = self.get_sid(user)
         return user
@@ -206,14 +253,14 @@ class RoboBoi(object):
             """
             loading = True
             logged_in = False
-            print("\n\nWaiting for successfull login verification...\n\n")
+            print("\n\n...Waiting for successful login verification...\n\n")
             started = time.time()
             while loading:
                 try:
                     number = self.__driver.find_element_by_class_name("phoneNumber")
                 except:
                     number = None
-                    if time.time() - started % 4 == 0:
+                    if time.time() - started % 2 == 0:
                         print("\n...Still loading...\n")
                 if number:
                     print("One of the elements loaded!\n\n", number,"\n\n")
@@ -232,8 +279,11 @@ class RoboBoi(object):
             raise Exception("!!!WARNING: RoboBoi ended on an unexpected page!!!")           
 
         self.get_page('https://textnow.com/login')
+        self.__sleep(0.05, 0.2)
         username_field = self.__driver.find_element_by_id('txt-username')
+        self.__sleep(0.05, 0.2)
         password_field = self.__driver.find_element_by_id('txt-password')
+        self.__sleep(0.05, 0.2)
         username_field.send_keys(user.username)
         self.__sleep(0.05, 0.2)
         password_field.send_keys(user.password)
@@ -252,7 +302,9 @@ class RoboBoi(object):
         Get the page and fill self.__last_reload
         """
         self.__last_refresh = time.time()
-        return self.__driver.get(url)
+        self.__driver.get(url)
+        self.__driver.inject_script
+        return 
 
     def __refresh(self):
         self.__last_refresh = time.time()
@@ -263,7 +315,17 @@ class RoboBoi(object):
         return time.time() - self.__start_time
 
     def __time_on_page(self):
+        """
+        Get the time difference between the time this function is
+        called and the last time the page was refreshed
+        """
         return time.time() - self.__last_refresh
 
     def __sleep(self, lower_limit=0.01, upper_limit=1.0):
         time.sleep(random.uniform(lower_limit, upper_limit))
+
+    def kill_driver(self):
+        self.__driver.quit()
+
+    def kill_listener(self):
+        self.__server.stop()
