@@ -19,7 +19,7 @@ DOWNLOAD_PATH = ""
 
 LOADING_TIMEOUT = 30 # Seconds
 # Set to None to autodetect
-CHROME_BINARY = '/usr/bin/google-chrome'
+CHROME_BINARY = None
 
   #######################
  ## Database Settings ##
