@@ -8,7 +8,7 @@ from undetected_chromedriver.v2 import ChromeOptions, Chrome
 
 from pytextnow.database.db import DatabaseHandler
 from pytextnow.TN_objects.user import User
-from pytextnow.server.app import Listener
+from pytextnow.tools.server.app import Listener
 from pytextnow.tools.constants import *
 import pytextnow.settings
 
@@ -27,7 +27,6 @@ class RoboBoi(object):
         self.__last_refresh = 0
         self.__working = False
         print("\n\nCreating DatabaseHandler for RoboBoi...\n\n")
-        self.__db_handler = DatabaseHandler(main_handler=False)
         self.__driving = False
         self.__driver = self.__configure()
         self.__r_lock = threading.RLock()

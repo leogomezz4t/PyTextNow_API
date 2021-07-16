@@ -634,7 +634,7 @@ class DatabaseHandler(BaseDatabaseHandler):
     # SMS
     def get_newest_sms(self):
         return self._execute_sql(
-            "SELECT max (id) FROM '%s'" % (
+            "SELECT max (id) FROM '%s';" % (
                 self.get_table_name("Message")
             )
         ).first()

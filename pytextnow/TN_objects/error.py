@@ -10,7 +10,7 @@ class InvalidFileType(Exception):
 
 
 import typing
-from undetected_chromedriver..
+from undetected_chromedriver.v2
 
 class FailedRequest(Exception):
     def __init__(self, status_code: str):
@@ -72,22 +72,30 @@ class NetworkError(BaseError):
         super().__init__(message, errors)
 
 class BrowserError(BaseError):
+    """
+    An error occured in the driver
+    """
     def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
         super().__init__(message, errors)
     
-class ApiError(BaseError):
+class TNApiError(BaseError):
+    """
+    Handle errors returned by the text now api
+    """
     def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
         super().__init__(message, errors)
 
 class ListenerError(BaseError):
+    """
+    Errors for the Event Listener server
+    """
     def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
         super().__init__(message, errors)
 
 class DatabaseHandlerError(BaseError):
-    def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
-        super().__init__(message, errors)
-
-class RobotError(BaseError):
+    """
+    Database Handler related errors
+    """
     def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
         super().__init__(message, errors)
 
