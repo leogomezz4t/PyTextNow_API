@@ -1,4 +1,4 @@
-from pytextnow.TNAPI import Client
+from pytextnow.TNAPI import CellPhone as Client
 import random
 import os
 import secrets
@@ -9,7 +9,7 @@ import datetime
 from unittest import TestCase
 from uuid import uuid1
 from pytextnow.database.db import DatabaseHandler
-from tools.constants import *
+from pytextnow.tools.constants import *
 
 class DatabaseHandlerTest:
     """
