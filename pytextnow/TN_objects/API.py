@@ -1,4 +1,7 @@
 from copy import deepcopy
+from datetime import datetime
+import datetime as dt
+import time
 import json
 from pytextnow.tools.utils import map_to_class
 from pytextnow.database.db import DatabaseHandler
@@ -24,16 +27,55 @@ class ApiHandler(object):
     """
 
     def __init__(self, user) -> None:
-        self.__msg_url = "https://www.textnow.com/api/users/%s/messages" % (user.username)
-        self. "https://www.textnow.com/api/v3/contacts"
-        self.__v3 = "https://www.textnow.com/api/v3/"
+        self.version_endpoints = {
+            "default": "https://www.textnow.com/api/",
+            "v1": "https://www.textnow.com/api/v1/",
+            "v2": "https://www.textnow.com/api/v2/",
+            "v3": "https://www.textnow.com/api/v3/"
+        }
+
+        self.apis = {
+            "messages": {
+                "url": f"users/{user.username}/messages",
+                "endpoint": "default",
+                "params": [
+                    "contact_value",
+                    "start_message_id",
+                    "direction",
+                    "page_size",
+                    "get_archived",
+                ]
+                },
+            "contacts": {
+                "url": "contacts",
+                "endpoint": "v3",
+                "params": []
+            },
+            "attachment_url": {
+                "url": "attachment_url",
+                "endpoint": "v3",
+                "params": [
+                    "message_type"
+                ]
+            },
+            "send_attachment": {
+                "url": "send_attachment",
+                "endpoint": "v3",
+                "params": []
+            },
+            "account_info": {
+                "url": f"users/{user.username}",
+                "endpoint": "default",
+                "params": []
+            }
+        }
         self.__db_handler = DatabaseHandler()
-        self.__default_query = {
-            "?contact_value=": "0",
-            "&start_message_id=":"99999999999999",
-            "&direction=": "past",
-            "&page_size=": "100",
-            "&get_archived=": "1"
+        self.param_values = {
+            "contact_value": "string",
+            "start_message_id": "number",
+            "direction": ["past", "future"],
+            "page_size": "number",
+            "get_archived=": ["0", "1"]
         }
         self.cookies = {
             'connect.sid': self.user.sid
@@ -73,7 +115,7 @@ class ApiHandler(object):
             return result_json
         return map_to_class(data_dicts=result_json, multiple=True)
 
-    def get_new_mms(self, newest=True, from_="", raw=False):
+    def get_new_mms(self, newest=True, query="", from_="", raw=False):
         """
         Get the newest messages from the text now api
 
@@ -138,7 +180,7 @@ class ApiHandler(object):
         params = (
             ('page_size', '50'),
         )
-        res = requests.get(, params=params, cookies=self.cookies)
+        res = requests.get(self.apis["contacts"]["endpoint"] + self.apis["contacts"]["url"], params=params, cookies=self.cookies)
         contacts = json.loads(res.text)
         return contacts["result"]
 
