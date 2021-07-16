@@ -1,5 +1,5 @@
 from playsound import playsound
-import atexit
+#import atexit
 import datetime as dt
 import json
 import mimetypes
@@ -8,6 +8,7 @@ from datetime import datetime, time
 
 import requests
 
+from pytextnow.TN_objects.comms import ApiHandler
 from pytextnow.TN_objects.contact import Contact
 from pytextnow.TN_objects.container import Container
 from pytextnow.TN_objects.error import FailedRequest, InvalidEvent
@@ -30,7 +31,6 @@ class CellPhone:
             db_name: str = None,
             debug: bool = False,
             # Enable dev tools
-            low_level: bool = False,
             stay_alive: bool = True
         ):
         print("\n\nCreating DatabaseHandler Instance\n\n")
@@ -42,11 +42,11 @@ class CellPhone:
             )
         # Start event loop
         print("\n\nCreating RoboBoi Instance...\n\n")
-        self.__robo_boi = RoboBoi(low_level=low_level, start=False)
+        self.__robo_boi = RoboBoi(start=False)
         self.__user = self.__get_user_object(username)
-        self.__robo_boi._start()
+        self.__robo_boi.start()
         self.__api_handler = ApiHandler(self.__user)
-        atexit.register(self.exit)
+#        atexit.register(self.exit)
         if stay_alive:
             self.start_listening()
         self.text_tone = ""

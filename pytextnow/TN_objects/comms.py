@@ -33,7 +33,7 @@ class ApiHandler(object):
                         + "&page_size=100"\
                             + "&get_archived=1"
         self.cookies = {
-            'connect.sid': self.user.sid
+            'connect.sid': user.sid
         }
         # At this point, is there any use for this?
         #self.allowed_events = self.events.registered_events

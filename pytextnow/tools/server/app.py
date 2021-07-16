@@ -1,6 +1,6 @@
 from threading import Lock
 from flask import Response, Flask, request
-import werkzeug.serving import make_server
+from werkzeug.serving import make_server
 from logging import getLogger
 from pytextnow.database.db import DatabaseHandler
 
@@ -21,7 +21,7 @@ class Listener(object):
 
     def __init__(self):
         # Don't user the reloader so we can use this in a separate thread
-        self. __app = Flask("RoboBoi-Event-Listener")
+        self.__app = Flask("RoboBoi-Event-Listener")
         self.__app.use_reloader = False
         self.__server = make_server("127.0.0.1", 5050, self.__app)
         self._running = False
@@ -69,7 +69,7 @@ class Listener(object):
         self.__add_all_endpoints()
         self.__server.daemon_threads = True
         self._running = True
-        self.__server.server_forever()
+        self.__server.serve_forever()
 
     def kill(environ):
         if not 'werkzeug.server.shutdown' in environ:
@@ -86,7 +86,7 @@ class Listener(object):
             )
 
     def __add_endpoint(self, endpoint=None, endpoint_name=None, handler=None):
-        self.app.add_url_rule(
+        self.__app.add_url_rule(
             endpoint, endpoint_name,
             self.__EndpointAction(handler),
             methods=["GET"]

@@ -8,9 +8,9 @@ from undetected_chromedriver.v2 import ChromeOptions, Chrome
 
 from pytextnow.database.db import DatabaseHandler
 from pytextnow.TN_objects.user import User
-from pytextnow.server.app import Listener
+from pytextnow.tools.server.app import Listener
 from pytextnow.tools.constants import *
-import pytextnow.settings
+from pytextnow import settings
 
 class RoboBoi(object):
 
@@ -24,7 +24,7 @@ class RoboBoi(object):
         self.__debug = settings.DEBUG
 
         self.__start_time = time.time()
-        self.__last_refresh = 0
+        self.__last_refresh = time.time()
         self.__working = False
         print("\n\nCreating DatabaseHandler for RoboBoi...\n\n")
         self.__db_handler = DatabaseHandler(main_handler=False)
@@ -40,33 +40,35 @@ class RoboBoi(object):
         #)
         if start:
             self.start()
+        print("Finished RoboBoi.__init__")
     
     def start(self):
         # Start the thread to keep chrome open
         threading.Thread(target=self.__drive, daemon=True).start()
         # Start the server thread
         self.__server = Listener()
-        self.__server.start()
+        threading.Thread(target=self.__server.start, daemon=True).start()
 
     def __drive(self):
         self.__driving = True
         print("\n\nStarting to drive the robot...")
         with self.__driver:
-            next_refresh = random.uniform(settings.REFRESH_INTERVALS['lower'], settings.REFRESH_INTERVALS['upper'])
+            next_refresh = random.uniform(settings.REFRESH_INTERVALS['lower_limit'], settings.REFRESH_INTERVALS['upper_limit'])
             # Leave chrome running to keep the sid from changing (Valid for a month from last refresh)
             while self.__driving:
                 try:
                     # Refresh the page every 1 to 24 hours
                     if self.__time_on_page() > next_refresh:
-                        next_refresh = random.uniform(self.__ONE_HOUR, self.__DAY)
+                        next_refresh = random.uniform(settings.ONE_HOUR, settings.ONE_DAY)
                         self.__refresh()
-                except:
+                except Exception:
                     print("The Driver Experienced and exception some how...")
                     break
                 # Check for new things
                 with self.__r_lock:
                     new = self.__server.get_new()
                     if len(new) > 0:
+                        print("Got something to do.")
                         if len(self.to_be_updated) > 0:
                             print(
                                 "\n\n!!!WARNING!!!\n\n You have not cleared the 'RoboBoi.to_be_updated"
@@ -74,9 +76,9 @@ class RoboBoi(object):
                             )
                         # Check for new things
                         self.to_be_updated = new
-        end = time.time() - self.__start_time / self.__MINUTE
-        self.__sigkill()
-        print("Closed browser...We've been driving the browser for {} minutes" % (str(end)))
+        end = (time.time() - self.__start_time) / settings.ONE_MINUTE
+        self.kill_driver()
+        print("Closed browser...We've been driving the browser for %i minutes" % end)
 
     def get_new(self):
         with self.__r_lock:
@@ -92,7 +94,12 @@ class RoboBoi(object):
         TODO: Integrate user agent switching and total browser Anonymity
         """
         options = ChromeOptions()
-       # Don't run headless if in debug mode
+
+        # Disable "Make chrome default browser" and
+        # "Automatically send usage stats" prompt
+        options.add_argument('--no-first-run')
+
+        # Don't run headless if in debug mode
         if not self.__debug:
             options.add_argument('--headless')
             # Might cause detection due to shader testing
@@ -107,8 +114,14 @@ class RoboBoi(object):
             options.add_argument("--proxy-server=%s" % self.__proxy)
         options.add_argument('--disable-extensions')
 
+        # If the person has multiple chrome instances or versions, or
+        # has other Chromium-based browser(s) (looking at you, Brave)
+        # they can select the specific version they want to use here.
+        if settings.CHROME_BINARY:
+            options.binary_location = settings.CHROME_BINARY
+
         return Chrome(options=options)
-    
+
     def get_sid(self, user=None, from_login=True) -> str:
         """
         :Args:
@@ -268,7 +281,7 @@ class RoboBoi(object):
                     loading = False
                     logged_in = True
                 # Wait for the timeout
-                if time.time() - started >= self.__timeout:
+                if time.time() - started >= settings.LOADING_TIMEOUT:
                     raise Exception("Timed out while waiting for a page to load. "
                                     "Raise the time out limit or try again."
                                     "Location: tools/robot.py -> RoboBoi -> __login() --> __successful_login()"
@@ -304,7 +317,7 @@ class RoboBoi(object):
         """
         self.__last_refresh = time.time()
         self.__driver.get(url)
-        self.__driver.inject_script
+#        self.__driver.inject_script
         return 
 
     def __refresh(self):

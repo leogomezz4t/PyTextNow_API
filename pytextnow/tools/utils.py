@@ -62,6 +62,8 @@ def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False)
             mapped_obj = objects.get(USER_TYPE)
 
         if not mapped_obj:
+            t = list(data_dict.keys())
+            print(t)
             raise Exception(
                 f"Failed to find object with one or more of the following attributes: {data_dict.keys()} "
                 "Location: tools -> utils.py -> map_to_class() -> __map_it()"
