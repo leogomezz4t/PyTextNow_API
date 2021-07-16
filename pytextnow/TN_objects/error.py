@@ -10,7 +10,7 @@ class InvalidFileType(Exception):
 
 
 import typing
-from undetected_chromedriver.v2
+import settings
 
 class FailedRequest(Exception):
     def __init__(self, status_code: str):
@@ -96,6 +96,10 @@ class DatabaseHandlerError(BaseError):
     """
     Database Handler related errors
     """
+    def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
+        super().__init__(message, errors)
+
+class RobotError(BaseError):
     def __init__(self, message: str, errors: typing.Union[list, str]) -> None:
         super().__init__(message, errors)
 

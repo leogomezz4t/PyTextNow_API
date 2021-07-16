@@ -10,7 +10,7 @@ from TN_objects.API import ApiHandler
 from database.db import DatabaseHandler
 from tools.constants import *
 from tools.robot import RoboBoi
-
+from pytextnow.tools.server.app import ActiveCellPhoneTower
 
 class CellPhone:
     """
@@ -40,7 +40,7 @@ class CellPhone:
         self.__robo_boi = RoboBoi(start=False)
         self.__user = self.__get_user_object(username)
         self.__robo_boi._start()
-        self.__api_handler = ApiHandler(self.__user)
+        self.__cell_service = ActiveCellPhoneTower
         atexit.register(self.exit)
         if stay_alive:
             self.start_listening()

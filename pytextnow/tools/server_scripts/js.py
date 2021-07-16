@@ -48,9 +48,9 @@ def send_notif_func(url, data):
     """ % (url, data)
 
 def inject_comms_script(
-    dom_query, notify_script,
-    binding_loop
-):
+        dom_query, notify_script,
+        binding_loop
+    ):
     """
     Get it? Injecting the script :3
 

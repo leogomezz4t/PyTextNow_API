@@ -3,9 +3,40 @@
 
 ## Credit
 - Developer: Leonardo Wu-Gomez
-- Collaborators: SilverStrings024, bryanperez43
+- Collaborators: [SilverStrings024](https://github.com/SilverStrings024), bryanperez43
 - Reddit: [leogomezz4t](https://www.reddit.com/user/leogomezz4t)
 - Please tell me if you have any ideas for the API or reporting a bug
+
+## Contents
+[Credits](credits)
+1. [Setup](setup)
+2. [CellPhone](cellphone)
+    A. [How's It Work?](cellphone-how)
+    B. [Basic Usage](cellphone-basic-use)
+    C. [Advanced Usage](cellphone-advanced-use)
+
+3. [RoboBoi](robo-boi)
+    A. [How's It Work?](robo-how)
+    B. [Basic Usage](robo-basic)
+    C. [Advanced Usage](robo-advanced)
+    D. [Low Level Api](robo-low-lvl)
+    E. [Waiting For A Page](page-waits)
+
+4. [Event Listener](listner)
+    A. [How's It Work?](event-how)
+    B. [Low Level Api](low-lvl-listener)
+
+5. [DatabaseHandler](database-handler)
+    A. [High Level API](dbh-high-api)
+    B. [Lower Level API](dbh-lower-api)
+    C. [Database Customization](custom-dbh)
+
+6. [TN Objects](text-now-objects) (Important objects)
+    A. [ApiHandler](api)
+    B. [CellPhoneTower](cell-tower)
+    C. [Container](container)
+
+Setup
 
 ## Installation
 ### NOTE: Chrome (or at least Chromium) MUST be installed on your system. You will get cryptic errors otherwise!
@@ -53,6 +84,13 @@ client.send_mms("number", file_path)
 ```
 ### How to get new messages
 ```python
+# Check the Text Now API for new messages
+new_sms = cellphone.check_new()
+if new_sms:
+    for message in new_sms.ordered():
+
+        print(message)
+
 new_messages = client.get_unread_messages() -> MessageContainer list
 for message in new_messages:
     message.mark_as_read()

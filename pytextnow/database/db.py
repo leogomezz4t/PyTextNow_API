@@ -80,17 +80,19 @@ class BaseDatabaseHandler(object):
                 "because they are automatically created! "
                 "Location: db.py -> DatabaseHandler -> create_record()"
             )
-        self.__validate_data(table_name, info)
+        self._validate_data(table_name, info)
         columns = ""
         safe_values = []
         for column, value in info.items():
-            if type(value) == type(int()):
-                safe_values.append(value)
-            else:
-                safe_values.append(value)
+            safe_values.append(value)
+            # WHY?! This makes no sense
+#            if type(value) == type(int()):
+ #               safe_values.append(value)
+  #          else:
+   #             safe_values.append(value)
             columns += f"{column}" + ", "
         # Gives back (one, two, three)
-        safe_columns = f"{self.__clean_query(columns)}"
+        safe_columns = f"{self._clean_query(columns)}"
         sql = "INSERT INTO %s (%s) VALUES %s;" % (
             table_name, safe_columns, tuple(safe_values)
         )
@@ -114,7 +116,7 @@ class BaseDatabaseHandler(object):
         unsafe_filters = ""
         for column, value in filters.items():
             unsafe_filters += f"{column}='{value}', "
-        safe_filters = self.__clean_query(unsafe_filters)
+        safe_filters = self._clean_query(unsafe_filters)
         sql = """SELECT * 
         FROM %s 
         WHERE %s;""" % (table_name, safe_filters)
@@ -129,12 +131,12 @@ class BaseDatabaseHandler(object):
         :return: db_id
         """
 
-        self.__validate_data(table_name, new_data)
+        self._validate_data(table_name, new_data)
         ordered_values = []
         set_data = ""
         for column, value in new_data.items():
             set_data += f"{column} = '{value}' "
-        set_data = self.__clean_query(set_data)
+        set_data = self._clean_query(set_data)
         sql = """ UPDATE %s
         SET %s
         WHERE db_id = %s;""" % (
@@ -196,7 +198,7 @@ class BaseDatabaseHandler(object):
         # Each table gets its own update statement
         for table_name, data in table_data.items():
             # Validation
-            self.__validate_data(table_name, data)
+            self._validate_data(table_name, data)
             db_id = data.get('db_id', None)
             if not db_id:
                 raise Exception(
@@ -212,7 +214,7 @@ class BaseDatabaseHandler(object):
                 set_clause + f"{column} = ?, "
                 set_data.append("'" + value + "'")
             # Clean the query
-            clean_set_clause = self.__clean_query(set_clause)
+            clean_set_clause = self._clean_query(set_clause)
             # Produces
             # UPDATE user_sids SET username = some_username, sid = some_sid WHERE id = 2;
             # Execute the query
@@ -245,7 +247,7 @@ class BaseDatabaseHandler(object):
     def __create_table(
             self, table_name: str,
             info: typing.Dict[str, str]
-    ) -> None:
+        ) -> None:
         """
         Dynamically create a table based on the values given
         """
@@ -275,7 +277,7 @@ class BaseDatabaseHandler(object):
                 vals += f"{column} {col_type} NOT NULL UNIQUE, "
                 continue
             vals += f"{column} {col_type}, "
-        vals = self.__clean_query(vals)
+        vals = self._clean_query(vals)
         vals += ")"
         # If all the tables already exist, stripping out the ()
         # should leave the vals variable with a length of 0
@@ -322,7 +324,7 @@ class BaseDatabaseHandler(object):
         except Exception as e:
             raise Exception(f"FAILED to see if table exists {e}")
 
-    def __clean_query(self, sql_string: str) -> str:
+    def _clean_query(self, sql_string: str) -> str:
         if sql_string.endswith(", "):
             return sql_string[:len(sql_string) - 2]
         else:
@@ -393,7 +395,7 @@ class BaseDatabaseHandler(object):
                                            f"SQL: {sql}\n\nVALUES: {values}\n\nERROR: {e}"
                                            )
 
-    def __validate_data(
+    def _validate_data(
             self, table_name, data: typing.Dict[str, typing.Dict[str, str]]
     ) -> None:
         """
@@ -431,7 +433,7 @@ class BaseDatabaseHandler(object):
                     continue
                 error = f'INVALID DATA: The column "{field}" requires type ' \
                         f'{field_type} but got {type(data.get(field))} instead ' \
-                        'Location: db.py -> __DatabaseHandler -> __validate_data()'
+                        'Location: db.py -> __DatabaseHandler -> _validate_data()'
                 # Failed to cast, cannot accept incompatible data
                 if invalid_field:
                     invalid_fields[field].append(error)
@@ -632,7 +634,7 @@ class DatabaseHandler(BaseDatabaseHandler):
         self._delete_obj(self.get_table_name("Contact"), db_id)
 
     # SMS
-    def get_newest_sms(self):
+    def get_newest_sms(self,):
         return self._execute_sql(
             "SELECT max (id) FROM '%s';" % (
                 self.get_table_name("Message")

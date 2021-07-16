@@ -1,4 +1,4 @@
-from threading import Lock
+import threading
 from flask import Response, Flask, request
 import werkzeug.serving import make_server
 from logging import getLogger
@@ -42,10 +42,18 @@ class Listener(object):
                 "url": "/sent_mms/",
                 "func": self.__sent_mms
             },
+            "missed_call": {
+                "url": "/missed/call/",
+                "func": self.__missed_call
+            },
+            "missed_video": {
+                "url": "/missed/video/",
+                "func": self.__missed_video
+            },
         }
         self.new_things = []
         self.__request = request
-        self.__lock = Lock()
+        self.__lock = threading.Lock()
 
     def __call__(self, *args):
         
@@ -57,25 +65,30 @@ class Listener(object):
         self.response = Response(answer, status=200, headers={})
         # Send it
         return self.response
-    
 
     def start(self):
         """
         Do some setup and run the server
         """
+        print("\n\n...Setting up Listener Server...\n\n")
         # Mute the logger
         log = getLogger('werkzeug')
         log.disabled = True
         self.__add_all_endpoints()
         self.__server.daemon_threads = True
         self._running = True
-        self.__server.server_forever()
+        print("\n\n...Starting listener server for RoboBoi...\n\n")
+        threading.Thread(
+            target=self.__server.serve_forever
+        ).start()
+        print("\n\n...Listener Server Started...\n\n")
 
-    def kill(environ):
+    def kill(self, environ):
         if not 'werkzeug.server.shutdown' in environ:
             raise RuntimeError('Not running the listener server')
         print("\n\nShutting down the Listener Server...\n\n")
         environ['werkzeug.server.shutdown']()
+        self._running = False
 
     def __add_all_endpoints(self):
         for name, info in self.__endpoints.items():
@@ -112,12 +125,18 @@ class Listener(object):
         with self.__lock:
             self.new_things.append("sent_MultiMediaMessage")
 
-    def get_new(self):
+    def __missed_call(self):
         """
-        !!!WARNING!!!
-        This clears the new_things list after copying it for return
+        NOTE this is PURELY for notifications until the SIP calling is done.
         """
         with self.__lock:
-            things = self.new_things.copy()
-            self.new_things.clear()
-            return things
+            self.new_things.append("missed_call")
+
+    def __missed_video(self):
+        """
+        NOTE this is PURELY for notifications until the SIP calling is done.
+        """
+        with self.__lock:
+            self.new_things.append("missed_video")
+
+    def __handle_exception()

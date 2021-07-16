@@ -1,9 +1,139 @@
-from copy import deepcopy
+import requests
 import json
+from copy import deepcopy
 from pytextnow.tools.utils import map_to_class
 from pytextnow.database.db import DatabaseHandler
 from urllib.parse import quote_plus
-import requests
+
+from TN_objects.error import (
+    TNApiError,
+    DatabaseHandlerError,
+    NetworkError
+)
+
+class QueryBuilder:
+    def __init__(
+            self, user,
+            api="v3",
+            query_dict=None,
+            validate=True,
+            auto_build=True
+        ) -> None:
+        """
+        :Args:
+            - api: The api version (i.e 'v1' or 'v3')
+            - query_dict: your query parameters in dictionary where the outer
+                most keys are the fields in the url. This is optional and will default
+                to get all messages
+                Example: {
+                    'contact': '+1987654321',
+                    'start_id': "76254899'
+                }
+            - validate: If True, make sure all fields provided and that they will
+                be accepted by Text Now. All acceptable fields are located in self.__default_query
+            - auto_build: Whether or not to automatically build the query (Raises an Exception if query_dict not provided)
+
+        :Return:
+            - A string that will be appended to the base url to query the Text Now API
+        """
+        self.__default_query = {
+            # Add ? BEFORE the FIRST param and = AFTER EACH PARAM
+            #
+            "number": {
+                "param": "?contact_value=",
+                "value": "0"
+            },
+            "start_id": {
+                "param": "&start_message_id=",
+                "value":"99999999999999"
+            },
+            "direction": {
+                "param": "&direction=",
+                "value": "past"
+            },
+            "size": {
+                "param": "&page_size=",
+                "value": "100"
+            },
+            "archived": {
+                "param": "get_archived",
+                "value": "1"
+            }
+        }
+        self.user_query = {}
+        self.apis = {
+            "v1": "https://www.textnow.com/api/users/%s/messages" % (user.username),
+            "v3": "https://www.textnow.com/api/v3/"
+        }
+        self.__api = self.apis[api]
+        self.auto_build = auto_build
+        self.__validate_self()
+        super().__init__()
+
+    def __validate_self(self):
+        if self.auto_build and not self.query_dict:
+            raise Exception(
+                "ERROR: Cannot build a query string without a dictionary of params/values.\n"
+                "Location: TN_objects/API.py -> QueryBuilder().__init__()"
+            )
+        if self.validate:
+            self.validate(self.query_dict)
+        if self.auto_build:
+            self.build_url()
+
+    def validate(self, query_dict):
+        for param, value in query_dict.items():
+            try:
+                self.__default_query[param]
+            except KeyError:
+                raise Exception("INVALID QUERY DATA: ")
+
+    def build_query(self, filter_dict, verify_filters=True):
+        """
+        Take in a dictionary of filters whose keys are strings corresponding
+        to url parameters whose values are derived from the value assigned to the key
+        in the dictionary we got.
+        Verify that the url parameters are valid then go ahead and build the url.
+        
+        NOTE
+        Normally we want to verify that the filters are valid so we don't get flagged
+        for endpoint scraping but when we are indeed endpoint scraping, don't verify params,
+        just escape/convert their values.
+
+        :Args:
+            - filter_dict: A dictionary whose keys correspond to a query parameter
+                and value is what you want to assign to the key in your query.
+            - verify_filters: If True, we will make sure that every filter key you enter
+                is a valid parameter that we know is recognized by Text Now.
+                NOTE: Disable this to run automated tests to discover new endpoints.
+                    You most likely will get errors but if set up correctly, the errors
+                    should be handled automatically.
+        
+        :Returns:
+            - A URL built with the given filters and other required parameters
+                
+                Example: "https://www.textnow.com/api/users/username/messages?contact_value=%s&start_message_id=%s&direction=past&page_size=%s&get_archived=1"
+        """
+        if not query_info:
+            query_info = self.__default_query
+        q = "?"
+        q_dict = deepcopy(query_info)
+        for key, q_info in q_dict.items():
+            if isinstance(q_info['value'], dict):
+                val = json.loads(q_info['value'])
+            else:
+                val = str(q_info['value'])
+            strung = str(q_info['param'])+val
+
+            query_info.pop(key)
+            if len(query_info) == 0:
+                q += strung
+            if len(q) == 1:
+                q = strung + "&"
+            else:
+                q += strung + "&"
+        return q
+
 
 class ApiHandler(object):
     """
@@ -24,17 +154,9 @@ class ApiHandler(object):
     """
 
     def __init__(self, user) -> None:
-        self.__msg_url = "https://www.textnow.com/api/users/%s/messages" % (user.username)
-        self. "https://www.textnow.com/api/v3/contacts"
-        self.__v3 = "https://www.textnow.com/api/v3/"
+
         self.__db_handler = DatabaseHandler()
-        self.__default_query = {
-            "?contact_value=": "0",
-            "&start_message_id=":"99999999999999",
-            "&direction=": "past",
-            "&page_size=": "100",
-            "&get_archived=": "1"
-        }
+        self.__q_builder = QueryBuilder()
         self.cookies = {
             'connect.sid': self.user.sid
         }
@@ -46,15 +168,15 @@ class ApiHandler(object):
         }
         self.session = requests.session()
 
-    def get_new_sms(self, newest=True, query=None, from_="", raw=False):
+    def get_new_sms(self, newest=True, from_="", raw=False):
         """
         Get the newest messages from the text now api
 
         :Args:
             - newest: If True, will use the newest sms in the database
-                and use its TN-id in a query to the api
-            - query: The URL query to be appended to the /messages/
-                endpoint
+                and use its TN-id in a query to the api to get all messages
+                with a TN-id that's higher than the one we have
+            - query: The URL query to be appended to the endpoint
             - from_: The Contact object or phone number of the person or
                 contact you want to see the messages from
         
@@ -62,11 +184,17 @@ class ApiHandler(object):
             Container of Message & MultiMediaMessages orded by descending ID
         """
         # If no query provided, use defaults to get everything
-
-        if not query:
-            query = self.__default_query
+        if newest:
+            # Get the newest message id we have on record
+            newest_id = self.__db_handler.get_newest_sms().id
+        query = deepcopy(self.__default_query)
+        if from_ != "":
+            query['contact']['value'] = from_
         result_json = json.loads(self.session.get(
-                quote_plus(self.__msg_url+query),
+                quote_plus(
+                    self.__msg_url
+                    + self.build_query(query)
+                ),
                 headers=self.headers, cookies=self.cookies
             ).content)
         if raw:
@@ -96,35 +224,7 @@ class ApiHandler(object):
             return result_json
         return map_to_class(data_dicts=result_json, multiple=True)
 
-    def build_query(self, query_info=None):
-        """
-        Dynamically create a query to be appended to the end
-        of a url to complete it.
 
-        Build a query that looks like this
-        "https://www.textnow.com/api/users/"
-                + self.__user.username
-                + "/messages?contact_value=%s"
-                + "&start_message_id=%s"
-                + "&direction=past"
-                + "&page_size=%s"
-                + "&get_archived=1"
-        but dynamically. This helps if scraping to find endpoints
-        """
-        if not query_info:
-            query_info = self.__default_query
-        q = "?"
-        q_dict = deepcopy(query_info)
-        for param, value in q_dict.items():
-            strung = str(param)+str(value)
-            query_info.pop(param)
-            if len(query_info) == 0:
-                q += strung
-            if len(q) == 1:
-                q = strung + "&"
-            else:
-                q += strung + "&"
-        return q
 
     def get_raw_contacts(self):
         """
@@ -138,7 +238,7 @@ class ApiHandler(object):
         params = (
             ('page_size', '50'),
         )
-        res = requests.get(, params=params, cookies=self.cookies)
+        res = requests.get(self.cookies.get("FINISH ME"), params=params, cookies=self.cookies)
         contacts = json.loads(res.text)
         return contacts["result"]
 
@@ -168,12 +268,14 @@ class ApiHandler(object):
                 self.request_handler(req.status_code)
         return all_messages
 
-    def wait_for_response(self, number, timeout_bool=True):
+    def await_response(self, number, timeout_bool=True):
+        
         for msg in self.get_unread_messages():
             msg.mark_as_read()
         timeout = datetime.now() + dt.timedelta(minute=10)
         if not timeout_bool:
             while 1:
+                # Slow down the requests because this is too many
                 unread_msgs = self.get_unread_messages()
                 filtered = unread_msgs.get(number=number)
                 if len(filtered) == 0:
@@ -189,3 +291,8 @@ class ApiHandler(object):
                     time.sleep(0.2)
                     continue
                 return filtered[0]
+
+    def generate_query(self, api, info_dict):
+        url = self.apis.get(api, None) or self.apis.get('v3')
+        # generate query
+        return url+quote_plus(self.build_query(info_dict))
