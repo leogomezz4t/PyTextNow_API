@@ -4,7 +4,7 @@ import datetime as dt
 import json
 import mimetypes
 import time
-from datetime import time
+from datetime import time as dt
 
 from TN_objects.API import ApiHandler
 from database.db import DatabaseHandler
