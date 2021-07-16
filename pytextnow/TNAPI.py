@@ -1,8 +1,5 @@
 from playsound import playsound
 import atexit
-import datetime as dt
-import json
-import mimetypes
 import time
 from datetime import time as dt
 
@@ -40,8 +37,12 @@ class CellPhone:
         self.__robo_boi = RoboBoi(start=False)
         self.__user = self.__get_user_object(username)
         self.__robo_boi._start()
+<<<<<<< HEAD
         self.__cell_service = ActiveCellPhoneTower
         atexit.register(self.exit)
+=======
+        self.__api_handler = ApiHandler(self.__user)
+>>>>>>> ceed049cec39e2a3f9beb5d84bad3c68af262c93
         if stay_alive:
             self.start_listening()
         self.text_tone = ""
