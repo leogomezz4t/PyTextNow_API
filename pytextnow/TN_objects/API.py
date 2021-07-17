@@ -1,11 +1,7 @@
-<<<<<<< HEAD
-import requests
-=======
 from copy import deepcopy
 from datetime import datetime
 import datetime as dt
 import time
->>>>>>> ceed049cec39e2a3f9beb5d84bad3c68af262c93
 import json
 from copy import deepcopy
 from pytextnow.tools.utils import map_to_class
@@ -39,38 +35,83 @@ class QueryBuilder:
             - validate: If True, make sure all fields provided and that they will
                 be accepted by Text Now. All acceptable fields are located in self.__default_query
             - auto_build: Whether or not to automatically build the query (Raises an Exception if query_dict not provided)
-
         :Return:
             - A string that will be appended to the base url to query the Text Now API
         """
+        self.version_endpoints = {
+            "default": "https://www.textnow.com/api/",
+            "v1": "https://www.textnow.com/api/v1/",
+            "v2": "https://www.textnow.com/api/v2/",
+            "v3": "https://www.textnow.com/api/v3/"
+        }
         self.__default_query = {
             # Add ? BEFORE the FIRST param and = AFTER EACH PARAM
             #
             "number": {
-                "param": "?contact_value=",
+                "param": "contact_value",
                 "value": "0"
             },
             "start_id": {
-                "param": "&start_message_id=",
+                "param": "start_message_id",
                 "value":"99999999999999"
             },
             "direction": {
-                "param": "&direction=",
+                "param": "direction",
                 "value": "past"
             },
             "size": {
-                "param": "&page_size=",
+                "param": "page_size",
                 "value": "100"
             },
             "archived": {
                 "param": "get_archived",
                 "value": "1"
+            },
+            "msg_type": {
+                "param": "message_type",
+                "value": "2"
             }
         }
         self.user_query = {}
         self.apis = {
-            "v1": "https://www.textnow.com/api/users/%s/messages" % (user.username),
-            "v3": "https://www.textnow.com/api/v3/"
+            "messages": {
+                "url": f"users/{user.username}/messages",
+                "endpoint": "default",
+                "params": [
+                    "contact_value",
+                    "start_message_id",
+                    "direction",
+                    "page_size",
+                    "get_archived",
+                ]
+                },
+            "contacts": {
+                "url": "contacts",
+                "endpoint": "v3",
+                "params": []
+            },
+            "attachment_url": {
+                "url": "attachment_url",
+                "endpoint": "v3",
+                "params": [
+                    "message_type"
+                ]
+            },
+            "send_attachment": {
+                "url": "send_attachment",
+                "endpoint": "v3",
+                "params": []
+            },
+            "account_info": {
+                "url": f"users/{user.username}",
+                "endpoint": "default",
+                "params": []
+            },
+            "sip": {
+                "url": "sip",
+                "endpoint": "v3",
+                "params": []
+            }
         }
         self.__api = self.apis[api]
         self.auto_build = auto_build
@@ -95,7 +136,7 @@ class QueryBuilder:
             except KeyError:
                 raise Exception("INVALID QUERY DATA: ")
 
-    def build_query(self, filter_dict, verify_filters=True):
+    def build_query(self, query_info, filter_dict, verify_filters=True):
         """
         Take in a dictionary of filters whose keys are strings corresponding
         to url parameters whose values are derived from the value assigned to the key
@@ -106,7 +147,6 @@ class QueryBuilder:
         Normally we want to verify that the filters are valid so we don't get flagged
         for endpoint scraping but when we are indeed endpoint scraping, don't verify params,
         just escape/convert their values.
-
         :Args:
             - filter_dict: A dictionary whose keys correspond to a query parameter
                 and value is what you want to assign to the key in your query.
@@ -148,11 +188,8 @@ class ApiHandler(object):
     Text Now API. It does nothing other than that. This is
     because we may end up needing to build more complex urls
     orif we find more end points.
-
-
     A wrapper to obscure the API code away from the main class
     based "program".
-
     Also dynamically builds url queries based on the information it was given
     which are automatically converted to be url safe. This can be extremely useful
     if we think there will be some more endpoints that we didn't forsee.
@@ -231,7 +268,6 @@ class ApiHandler(object):
     def get_new_sms(self, newest=True, from_="", raw=False):
         """
         Get the newest messages from the text now api
-
         :Args:
             - newest: If True, will use the newest sms in the database
                 and use its TN-id in a query to the api to get all messages
@@ -264,7 +300,6 @@ class ApiHandler(object):
     def get_new_mms(self, newest=True, query="", from_="", raw=False):
         """
         Get the newest messages from the text now api
-
         :Args:
             - newest: If True, will use the newest sms in the database
                 and use its TN-id in a query to the api
@@ -289,7 +324,6 @@ class ApiHandler(object):
     def get_raw_contacts(self):
         """
         Gets all textnow contacts
-
         TODO: Start worker to check if contacts are not in db
             if not, create them. Possibly even get the length of
             contacts, split the length between workers then start
@@ -298,11 +332,7 @@ class ApiHandler(object):
         params = (
             ('page_size', '50'),
         )
-<<<<<<< HEAD
-        res = requests.get(self.cookies.get("FINISH ME"), params=params, cookies=self.cookies)
-=======
         res = requests.get(self.apis["contacts"]["endpoint"] + self.apis["contacts"]["url"], params=params, cookies=self.cookies)
->>>>>>> ceed049cec39e2a3f9beb5d84bad3c68af262c93
         contacts = json.loads(res.text)
         return contacts["result"]
 
