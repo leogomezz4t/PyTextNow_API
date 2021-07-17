@@ -1,3 +1,4 @@
+import requests
 from copy import deepcopy
 from datetime import datetime
 import datetime as dt
@@ -198,11 +199,6 @@ class ApiHandler(object):
     """
 
     def __init__(self, user) -> None:
-<<<<<<< HEAD
-
-        self.__db_handler = DatabaseHandler()
-        self.__q_builder = QueryBuilder()
-=======
         self.version_endpoints = {
             "default": "https://www.textnow.com/api/",
             "v1": "https://www.textnow.com/api/v1/",
@@ -253,7 +249,6 @@ class ApiHandler(object):
             "page_size": "number",
             "get_archived=": ["0", "1"]
         }
->>>>>>> ceed049cec39e2a3f9beb5d84bad3c68af262c93
         self.cookies = {
             'connect.sid': self.user.sid
         }
