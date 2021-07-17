@@ -1,9 +1,9 @@
 import threading
 from flask import Response, Flask, request
-import werkzeug.serving import make_server
+from werkzeug.serving import make_server
 from logging import getLogger
 from pytextnow.database.db import DatabaseHandler
-
+from TN_objects.API import ListenerEvents
 class Listener(object):
 
     class __EndpointAction(object):
@@ -20,6 +20,7 @@ class Listener(object):
             return self.response
 
     def __init__(self):
+        self.__listener_events = ListenerEvents
         # Don't user the reloader so we can use this in a separate thread
         self. __app = Flask("RoboBoi-Event-Listener")
         self.__app.use_reloader = False
@@ -51,7 +52,6 @@ class Listener(object):
                 "func": self.__missed_video
             },
         }
-        self.new_things = []
         self.__request = request
         self.__lock = threading.Lock()
 
@@ -111,32 +111,30 @@ class Listener(object):
         Alert of a new message
         """
         with self.__lock:
-            self.new_things.append("rec_Message")
+            self.__listener_events.add("rec_Message")
 
     def __received_mms(self):
         with self.__lock:
-            self.new_things.append("rec_MultiMediaMessage")
+            self.__listener_events.add("rec_MultiMediaMessage")
 
     def __sent_sms(self):
         with self.__lock:
-            self.new_things.append("sent_Message")
+            self.__listener_events.add("sent_Message")
 
     def __sent_mms(self):
         with self.__lock:
-            self.new_things.append("sent_MultiMediaMessage")
+            self.__listener_events.add("sent_MultiMediaMessage")
 
     def __missed_call(self):
         """
         NOTE this is PURELY for notifications until the SIP calling is done.
         """
         with self.__lock:
-            self.new_things.append("missed_call")
+            self.__listener_events.add("missed_call")
 
     def __missed_video(self):
         """
         NOTE this is PURELY for notifications until the SIP calling is done.
         """
         with self.__lock:
-            self.new_things.append("missed_video")
-
-    def __handle_exception()
+            self.__listener_events.add("missed_video")

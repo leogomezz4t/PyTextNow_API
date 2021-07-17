@@ -215,7 +215,7 @@ class RoboBoi(object):
         of the information entered in the database.
         """
         print("\n\n...Please Provide Login Credentials...\n")
-        # We may require input. 'Pause' the thread so it's not buried
+        # We may require input. 'Pause' the feedback thread so it's not buried
         self.__feedback_wait = True
         if not username:
             username = getpass.getpass("Please enter your username: ")
@@ -268,8 +268,8 @@ class RoboBoi(object):
                     logged_in = True
                 # Wait for the timeout
                 if time.time() - started >= self.__timeout:
-                    raise Exception("Timed out while waiting for a page to load. "
-                                    "Raise the time out limit or try again."
+                    raise Exception("Timed out while waiting for a page to load. \n"
+                                    "Raise the time out limit or try again.\n"
                                     "Location: tools/robot.py -> RoboBoi -> __login() --> __successful_login()"
                                     )
             print("\n\n",self.__driver.current_url, "\n\n")

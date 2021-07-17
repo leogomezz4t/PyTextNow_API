@@ -36,14 +36,30 @@
     B. [CellPhoneTower](cell-tower)
     C. [Container](container)
 
-Setup
+# Setup
+### Running The Tests
+Running the tests to verify that the API was installed correctly and will work on your system is extremely easy.
+Either open a python shell in your terminal or create a new file then do...
+```python
+from pytextnow.tests import StabilityTest
+StabilityTest(cleanup_after_test=True)
+```
+On instantiation, the StabilityTest class will begin testing all components of this package.
+As it tests, you **will** see various debug statements telling you what it's testing and when it completes each test.
+If any tests fail, you will see an exception with some sort of error description.
+If the tests fail on your device, please create an issue on github and include your system specs such as OS, RAM, CPU (include speed and type), and your settings.py file.
 
 ## Installation
 ### NOTE: Chrome (or at least Chromium) MUST be installed on your system. You will get cryptic errors otherwise!
+
+### NOTE EXTENDED: Installing this package globally will likely cause you to have to run in root....
+### This is to be expected; if this isn't what you want, install in a virtual environment instead! **!!!DO NOT submit an issue for this as it is EXPECTED BEHAVIOR!!!**
+
 #### Method One: ***Using git clone***
 ```bash
 git clone https://github.com/leogomezz4t/PyTextNow_API
 ```
+
 #### Method Two: ***Using pip***
 ```bash
 pip install PyTextNow
@@ -52,26 +68,57 @@ pip install PyTextNow
 
 
 ## Usage
+**NOTE** - The version of your password stored in the database IS NOT encrypted.
+### Stay logged in forever!
+[SilverStrings024]() found a way to, after you provide credentials to the database, not have to login manually nor get the sid ever again unless the accounts stored in the database are destroyed, your account(s) is suspended/banned or the robot plain out fails.
+
+**How It Works**
+When you start the program, the CellPhone object will create a Database Handler object which will create
+the database and tables automatically. After the database handler has completed its set up, the CellPhone
+will create a RoboBoi instance and use its `choose_account` method to do one of three things.
+
+1. Prompt you for a username and password (only happens if no account exists in the database yet)
+2. Automatically chooses the first account in the database if it's the only one we have
+OR
+3. List all of your accounts and allow you to choose one to use by entering the number listed to the left of it
+
+After you choose an account or provide details to create a new one, RoboBoi will navigate to textnow.com/login and use the information you entered to log in. The robot will attempt to verify that it logged in successfully after submitting the form, if it did not get a successful login, it will look for signs of incorrect credentials. If It sees that the credentials were incorrect, it will pause everything and ask you to re-enter them.
+After a successful login, RoboBoi will have the DatabaseHandler update the information in the database to match what you just successfully logged in with.
+
+If/when we get a successful login, the robot will leave the page open and refresh it at random intervals between 12 to 24 hours. This completely removes the need for YOU to go get the connect.sid cookie value and instead, pawn it off on a robot to get it for you! Don't you just love automation? :D
+
+NOTE: If the program stops, the robot WILL have to log in again however, it will retain your account information. so you only need to start the program again and choose the account you want
 
 ### How to get the cookie
-[How to get the cookie](get_cookie.mp4)
+#### **Replaced with autonomous login** See [Ways to authenticate](auth)
+DEPRECATED - [How to get the cookie](get_cookie.mp4)
 
 ### How to get your username
 [How to get TextNow username](get_username.mp4)
 
 ### Ways to authenticate
 ```python
+# Yes, this is seriously all you have to do
 import pytextnow
-
-# Way 1. Include connect.sid cookie in the constructor
-client = pytextnow.Client("username", cookie="sid").
-
-# Way 2. Just instantiate and a prompt will appear on the command line
-
-# Way 3. If you inputed the wrong cookie and are getting RequestFailed. This is how to reset it
-client.auth_reset()
-# will redo the prompt
+cell_phone = pytextnow.CellPhone()
+# The cell phone will automatically create the database and its tables,
+# then prompt you to provide a username and password. After you provide
+# login credentials the first time, you won't have to do it again unless
+# you change your password, your account is banned/suspended or you
+# want to use a different account
 ```
+### What replaced Client.auth_reset()?
+The CellPhone object replaces the Client object completely.
+It was designed to prevent you from having to do the more tedious/annoying things like finding your connect.sid cookie value or manually logging in over and over.
+**How It Works**
+When you call a CellPhone method like cellphone.send_sms(), it will attempt to send your message using the
+connect.sid cookie value that the robot found. If the message fails to send, the cellphone will tell the robot to make sure we're still logged in. If we're not, it will print something to the terminal saying "!!!WARNING!!! RoboBoi was logged out, attempting to log in again..."
+This is purely just to keep you informed since the robot should handle everything for you.
+
+If the robot is banned, suspended or redirected to an unexpected page, it will take a screenshot of the last thing it saw and raise a [RobotException](robot-exceptions).
+
+**TODO**
+If the robot is told that it has the wrong username or password, it will prompt you to re-enter the credentials. After a successful log in, the credentials in the database will be updated with your new information.
 
 ### How to send an sms message
 ```python
@@ -83,15 +130,20 @@ file_path = "./img.jpeg"
 client.send_mms("number", file_path)
 ```
 ### How to get new messages
+#### Replaced with Event Listener
+DEPRECATED - New messages are automatically grabbed from the API and saved in the database.
+This is an optimization technique that will dramatically decrease the amount of requests we send and how much data is stored in RAM while python does things.
+This also dramatically increases speeds since SQL is MUCH faster than api calls.
+
 ```python
-# Check the Text Now API for new messages
-new_sms = cellphone.check_new()
+# Check if the cellphone has new sms
+new_sms = cellphone.new_sms()
 if new_sms:
-    for message in new_sms.ordered():
+    for message in new_sms.order_by('-date'):
 
         print(message)
 
-new_messages = client.get_unread_messages() -> MessageContainer list
+new_messages = cellphone.get_unread_messages() -> MessageContainer list
 for message in new_messages:
     message.mark_as_read()
     print(message)
@@ -108,8 +160,8 @@ for message in new_messages:
 
     # Functions
     # mark_as_read() will post the server as read
-    # send_sms() will send an sms to the number who sent the message
-    # send_mms() will send an mms to the number who sent the message
+    # reply_sms() will send an sms to the number who sent the message
+    # reply_mms() will send an mms to the number who sent the message (calls self.__api_handler.send_* since all this happens in the cellphone object)
     
     # MultiMediaMessage
     # All the attributes of Message
@@ -131,25 +183,28 @@ for message in new_messages:
 ```
 ### How to get all messages
 ```python
-messages = client.get_messages() -> Container list
+messages = cellphone.get_messages(paginate_by=50) -> Container list
 # Same as above
 ```
 ### How to get all sent messages
 ```python 
-sent_messages = client.get_sent_messages() -> Container list
+sent_messages = cellphone.get_sent_messages() -> Container list
 #Same as above
 ```
 
 ### How to filter messages
 ```python
-filtered = client.get_messages().filter(number="number")
+# 50 messages per page. Only get messages with this number
+filtered = cellphone.sms.filter(number="+19876543212")
 ```
 
 ### How to get contacts
 ```python
+# Returns a Container object which has a .first()
 contacts = client.get_contacts()
-print(contacts[0].number)
-print(contacts[0].name)
+first_contact = contacts.first()
+print(contact.number)
+print(contact.name)
 ```
 
 ### How to filter contacts
@@ -161,69 +216,76 @@ filtered = contacts.filter(name="Alice")
 ```python
 # This will wait for a response from someone and return the Message
 
-msg = client.wait_for_response("number")
+msg = client.await_response("number")
 
 # This function will work with a message object too
-
+# I don't understand this. Why would you wait for a response to a message you haven't read
+# If this means get sent unread then this needs to change
 unreads = client.get_unread_messages()
 for unread in unreads:
-    msg = unread.wait_for_response()
+    msg = unread.await_response()
 ```
 
 ## NEW Simple bot snippet
 ```python
 import pytextnow as pytn
 
-client = pytn.Client("username", cookie="connect.sid")
-
-@client.on("message")
+client = pytn.CellPhone("username goes here") # Username is optional
+# Uses the new ListenerEvents object
+@cellphone.on_incoming("new_Message")
 def handler(msg):
     print(msg)
     if msg.type == pytn.MESSAGE_TYPE:
         if msg.content == "ping":
-            msg.send_sms("pong")
+            msg.reply_sms("pong")
         else:
             msg.mv("test" + msg.extension)
 ``` 
 
-## Simple bot snippet | OUTDATED AND DEPRECATED
-```python
-import pytextnow as pytn
-import time
-
-client = pytn.Client("username", cookie="connect.sid")
-while 1:
-    unreads = client.get_unread_messages()
-    for msg in unreads:
-        msg.mark_as_read()
-        if msg.type == pytn.MESSAGE_TYPE:
-            if msg.content == "ping":
-                msg.send_sms("pong")
-        else:
-            msg.mv("test" + msg.extension)
-    
-    time.sleep(0.2)
-```
-
 ## Custom Module Exceptions
 
 ### FailedRequest:
-#### This API runs on web requests and if the request fails this Exception will be raised
+This API runs on web requests and if the request fails this Exception will be raised
 
 ### AuthError:
-#### During an auth reset if a cookie is not passed and there is no stored cookie in the file it will raise this error.
+If the provided username or password was incorrect, your account was banned/suspended or deleted, this will be raised
 
+### RobotError:
+If the robot encounters something it was not prepared for, it will raise a RobotException. This will happen if the robot has run out of options to accomplish its goal.
+
+### ListenerError
+You will see this if the Event Listener Server raises an exception. This should be rare but *can* happen.
+If it does and you're not using it directly, please create a new issue on github.
+
+### TNApiError
+Occurs when the ApiHandler object hits an exception internally or if Text Now returns an error code.
+
+### NetworkError
+There's an issue with your internet
+
+### DatabaseHandlerError
+This will obviously be raised any time the database handler runs into an error.
+Please note that if it hits an error before committing its last entry, you **will** lose that data.
+
+### BrowserError
+Occurs when something is wrong with the browser. Such as a crash, freezing, no loading, etc.
 
 ## Patch Notes
 
 ### 2.0.0
 - Refactoring files/cleaning up
-- Making user sid private.
-- Refreshing allowing a user to keep their sid available for a longer period of time.
+- [Stay Logged in Forever!](staying-logged-in)
+- Added `User` class to represent user accounts
 - Added `Contact` class
 - Added `Container` class
-- can use `get_contacts()` from the `Client` instance
-- Switched from using a file to database
+    - [Added convenience methods](using-the-container)
+- Switched from using a file to [database](database-handler)
+- Added [Robot](roboboi) for autonomous login
+- Added [Event Listener server](event-listening) for notifications on new messages
+- [ApiHandler object created](api-handler)
+- [QueryBuilder object created](query-building)
+- [New exceptions created](custom-exceptions)
+- [SilverStrings024 wrote tests](running-the-tests)
 
 ### 1.1.7
 - Added get_username.mp4 video

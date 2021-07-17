@@ -1,3 +1,7 @@
+import json
+import os
+import cryptography
+
 ONE_MINUTE = 60
 ONE_HOUR = ONE_MINUTE * 60
 ONE_DAY = ONE_HOUR * 24
@@ -17,11 +21,14 @@ DOWNLOAD_PATH = ""
  ## RoboBoi Settings ##
 ######################
 
-LOADING_TIMEOUT = 30 # Seconds
-
+LOADING_TIMEOUT = 30  # Seconds
+AUTO_RELOGIN = True
 
   #######################
  ## Database Settings ##
 #######################
+
+
 SCHEMA = None
-DB_NAME = ""
+# NOTE: You must include the path you want the DB to be saved to
+DB_NAME = None
