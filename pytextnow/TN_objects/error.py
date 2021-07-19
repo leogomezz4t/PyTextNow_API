@@ -10,7 +10,7 @@ class InvalidFileType(Exception):
 
 
 import typing
-import settings
+from pytextnow import settings
 
 class FailedRequest(Exception):
     def __init__(self, status_code: str):
@@ -67,7 +67,7 @@ class NetworkError(BaseError):
     def __init__(
         self, message: str,
         errors: typing.Union[list, str],
-        proxy=None, vpn=None, port=settings.DEDAULT_LISTENER_PORT
+        proxy=None, vpn=None, port=settings.LISTENER_PORT
         ) -> None:
         super().__init__(message, errors)
 

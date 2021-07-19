@@ -3,7 +3,7 @@ from flask import Response, Flask, request
 from werkzeug.serving import make_server
 from logging import getLogger
 from pytextnow.database.db import DatabaseHandler
-from TN_objects.API import ListenerEvents
+from pytextnow.TN_objects.API import ListenerEvents
 class Listener(object):
 
     class __EndpointAction(object):
