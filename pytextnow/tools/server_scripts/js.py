@@ -66,7 +66,10 @@ class JavascriptGenerator:
         """
         if "q" in q_type:
             return JavascriptSnippet("document.querySelectorAll('%s');" % value)
-        return JavascriptSnippet("document.getElementBy"+q_type.title()+"("+value+");")
+        
+        q_type = [i.title() for i in q_type.split("_")]
+        q_type = "".join(q_type)
+        return JavascriptSnippet("document.getElementBy%s('%s');" % (q_type, value))
 
     def event_listener(js_query, js_event, handler):
         return JavascriptSnippet("""
