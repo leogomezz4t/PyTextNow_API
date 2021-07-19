@@ -64,12 +64,19 @@ class JavascriptGenerator:
         Buid a piece of JS that gets an element using the data
         that we were given
         """
-        if "q" in q_type:
-            return JavascriptSnippet("document.querySelectorAll('%s');" % value)
-        
-        q_type = [i.title() for i in q_type.split("_")]
-        q_type = "".join(q_type)
-        return JavascriptSnippet("document.getElementBy%s('%s');" % (q_type, value))
+        q = q_type.lower()
+        if "q" in q:
+            return JavascriptSnippet("document.querySelectorAll('%s');" % value)    
+        elif "class" in q:
+            return JavascriptSnippet("document.getElementByClassName('%s');" % value)
+        elif "tag" in q:
+            return JavascriptSnippet("document.getElementByTagName('%s');" % value)
+        elif "name" in q:
+            return JavascriptSnippet("document.getElementByName('%s');" % value)
+        elif "id" in q:
+            return JavascriptSnippet("document.getElementById('%s');" % value)
+        else:
+            raise ValueError("Invalid q_type: '%s'" % q_type)
 
     def event_listener(js_query, js_event, handler):
         return JavascriptSnippet("""
