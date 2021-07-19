@@ -1,29 +1,26 @@
-from datetime import datetime
-import json
-
+from dateutil import parser
 
 class Message:
-    def __init__(self, from_db=False, **kwargs):
-        print("\n\nFrom Message.__init__\n", json.dumps(kwargs, indent=4))
-        msg_obj = kwargs
+    def __init__(self, raw_obj, from_db=False): 
+        self.raw_obj = raw_obj
         if from_db:
-            self.content = msg_obj['content']
-            self.number = msg_obj["number"]
-            self.first_contact = msg_obj['first_contact']
-            self.direction = msg_obj["direction"]
+            self.content = self.raw_obj['content']
+            self.number = self.raw_obj["number"]
+            self.first_contact = self.raw_obj['first_contact']
+            self.direction = self.raw_obj["direction"]
             # Work around for no id on object creation
-            self.db_id = msg_obj.get('db_id')
+            self.db_id = self.raw_obj.get('db_id')
 
         else:
-            self.first_contact = msg_obj["conversation_filtering"]["first_time_contact"]
-            self.direction = msg_obj["message_direction"]
-            self.content = msg_obj["message"]
-            self.number = msg_obj["contact_value"]
+            self.first_contact = self.raw_obj["conversation_filtering"]["first_time_contact"]
+            self.direction = self.raw_obj["message_direction"]
+            self.content = self.raw_obj["message"]
+            self.number = self.raw_obj["contact_value"]
 
-        self.date = datetime.fromisoformat(msg_obj["date"])
-        self.read = msg_obj["read"]
-        self.id = msg_obj["id"]
-        self.raw = msg_obj
+        self.date = parser.parse(self.raw_obj["date"])
+        self.read = self.raw_obj["read"]
+        self.id = self.raw_obj["id"]
+        self.raw = self.raw_obj
 
     def __str__(self):
         return f'<{self.__class__.__name__} number: {self.number}, content: {self.content}>'

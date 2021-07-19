@@ -1,4 +1,4 @@
-from pytextnow.TNAPI import Client
+#from pytextnow.TNAPI import Client
 import random
 import os
 import secrets
@@ -8,8 +8,10 @@ import time
 import datetime
 from unittest import TestCase
 from uuid import uuid1
-from pytextnow.database.db import DatabaseHandler
 from tools.constants import *
+from pytextnow.database.db import DatabaseHandler
+from pytextnow.TN_objects.API import QueryBuilder
+from pytextnow.TN_objects.user import User
 
 class DatabaseHandlerTest:
     """
@@ -330,10 +332,16 @@ class ClientTest(object):
         self.client.send_mms(num, file_path)
         print("All good!")
 
+class QueryBuilderTest:
+    def __init__(self):
+        self.user = User(username="test")
+        qb = QueryBuilder(self.user, "messages")
+        print(qb.url)
+
 if __name__ == "__main__":
     try:
-        db_test = ClientTest()
-        db_test.setup()
+        db_test = QueryBuilderTest()
+        # db_test.setup()
        # os.remove("text_nowAPI.sqlite3")
     except Exception as e:
         print(e)

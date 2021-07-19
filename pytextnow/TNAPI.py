@@ -1,5 +1,4 @@
 from playsound import playsound
-import atexit
 import time
 from datetime import time as dt
 
