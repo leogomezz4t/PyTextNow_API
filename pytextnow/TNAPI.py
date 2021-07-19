@@ -3,10 +3,10 @@ import atexit
 import time
 from datetime import time as dt
 
-from TN_objects.API import ApiHandler
-from database.db import DatabaseHandler
-from tools.constants import *
-from tools.robot import RoboBoi
+from pytextnow.TN_objects.API import ApiHandler
+from pytextnow.database.db import DatabaseHandler
+from pytextnow.tools.constants import *
+from pytextnow.tools.robot import RoboBoi
 from pytextnow.tools.server.app import ActiveCellPhoneTower
 
 class CellPhone:
@@ -19,7 +19,7 @@ class CellPhone:
     def __init__(
             self, username: str = None,
             schema: str = None,
-            db_name: str = "text_nowAPI.sqlite3",
+            db_name: str = None,
             debug: bool = False,
             # Enable dev tools
             low_level: bool = False,
@@ -37,12 +37,7 @@ class CellPhone:
         self.__robo_boi = RoboBoi(start=False)
         self.__user = self.__get_user_object(username)
         self.__robo_boi._start()
-<<<<<<< HEAD
-        self.__cell_service = ActiveCellPhoneTower
-        atexit.register(self.exit)
-=======
         self.__api_handler = ApiHandler(self.__user)
->>>>>>> ceed049cec39e2a3f9beb5d84bad3c68af262c93
         if stay_alive:
             self.start_listening()
         self.text_tone = ""

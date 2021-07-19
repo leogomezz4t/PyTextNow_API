@@ -9,7 +9,7 @@ from pytextnow.tools.utils import map_to_class
 from pytextnow.database.db import DatabaseHandler
 from urllib.parse import quote_plus
 
-from TN_objects.error import (
+from pytextnow.TN_objects.error import (
     TNApiError,
     DatabaseHandlerError,
     NetworkError
