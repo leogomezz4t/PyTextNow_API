@@ -1,3 +1,7 @@
+# Ignore settings files (may include sensitive data, personall preferences, or
+# other changes that should not be able to be easily/accidentally pushed.)
+settings.py
+
 # SQLite
 *.sqlite3
 *.sqlite

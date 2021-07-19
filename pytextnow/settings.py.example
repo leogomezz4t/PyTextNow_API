@@ -24,6 +24,11 @@ DOWNLOAD_PATH = ""
 LOADING_TIMEOUT = 30  # Seconds
 AUTO_RELOGIN = True
 
+# Autodetect
+CHROME_BINARY = None
+# Override with this specific path
+#CHROME_BINARY = "/usr/bin/google-chrome"
+
   #######################
  ## Database Settings ##
 #######################
