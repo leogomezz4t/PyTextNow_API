@@ -1,5 +1,4 @@
 from playsound import playsound
-import atexit
 import time
 from datetime import time as dt
 
@@ -8,6 +7,7 @@ from pytextnow.database.db import DatabaseHandler
 from pytextnow.tools.constants import *
 from pytextnow.tools.robot import RoboBoi
 from pytextnow.tools.server.app import ActiveCellPhoneTower
+from pytextnow.voip import VOIP
 
 class CellPhone:
     """
@@ -41,6 +41,7 @@ class CellPhone:
         if stay_alive:
             self.start_listening()
         self.text_tone = ""
+        self._voip = None # Don't init now, will be used later if necessary
 
     def __get_user_object(self, username):
         user = None
@@ -58,7 +59,7 @@ class CellPhone:
         Get the new SID for the user and set user.sid to the new value
 
         If auto rotating, print out something to show that it changed
-        
+
         :Args:
             - sid: The value of the connect.sid cookie
             - auto_rotating: If Client noticed an SID change after hitting
@@ -66,7 +67,7 @@ class CellPhone:
             - method: If auto rotating, this will be the method calling
                 '__reset_sid' to be used in a debug print. If not auto
                 rotating, this should be None
-        
+
         :Returns:
             None
         """
@@ -84,7 +85,7 @@ class CellPhone:
         # No sid was provided, let the robot get it
         self.__user.sid = self.__robo_boi.get_sid(self.__user)
         return None
-    
+
     def await_result(self, func_name, fail_silently=False):
         result = self.__api_handler.results.get(func_name, None)
         if not result:
@@ -108,4 +109,8 @@ class CellPhone:
                             "\n\n!!!WARNING!!! CellPhone timed out while "
                             + "awaiting the result of %s" % (func_name)
                         )
-                    
+
+    def get_voip(self):
+        if self.__voip == None:
+            self.__voip = VOIP(self.__api_handler.get_sip_info())
+        return self.__voip

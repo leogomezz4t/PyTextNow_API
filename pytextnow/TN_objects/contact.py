@@ -1,6 +1,6 @@
 class Contact:
-    def __init__(self, from_db=False, *args, **kwargs):
-        self.raw_obj = kwargs
+    def __init__(self, raw_obj, from_db=False):
+        self.raw_obj = raw_obj
         self.db_id = None
         if not from_db:
             self.number = self.raw_obj.get("contact_value")
