@@ -1,4 +1,3 @@
-from playsound import playsound
 import time
 from datetime import time as dt
 
@@ -36,12 +35,12 @@ class CellPhone:
         print("\n\nCreating RoboBoi Instance...\n\n")
         self.__robo_boi = RoboBoi(start=False)
         self.__user = self.__get_user_object(username)
-        self.__robo_boi._start()
         self.__api_handler = ApiHandler(self.__user)
-        if stay_alive:
-            self.start_listening()
         self.text_tone = ""
         self._voip = None # Don't init now, will be used later if necessary
+        if stay_alive:
+            self.__robo_boi._start()
+            self.start_listening()
 
     def __get_user_object(self, username):
         user = None

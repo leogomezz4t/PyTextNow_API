@@ -10,11 +10,12 @@ from pytextnow.database.db import DatabaseHandler
 from pytextnow.TN_objects.user import User
 from pytextnow.tools.server.app import Listener
 from pytextnow.tools.constants import *
-import pytextnow.settings
+from pytextnow import settings
 
 class RoboBoi(object):
 
     def __init__(self, proxy=None, start=True) -> None:
+        # TODO
         self.__proxy = proxy
         # What table needs updated
         self.to_be_updated = []
@@ -27,6 +28,7 @@ class RoboBoi(object):
         self.__last_refresh = 0
         self.__working = False
         print("\n\nCreating DatabaseHandler for RoboBoi...\n\n")
+        self.__db_handler = DatabaseHandler()
         self.__driving = False
         self.__driver = self.__configure()
         self.__r_lock = threading.RLock()
