@@ -22,7 +22,7 @@ class BaseDatabaseHandler(object):
         self.__database = sqlite3.connect(db_name)
         self.__cursor = self.__database.cursor()
         # In case we want to change the database at somepoint
-        self.__tables = schema if schema else self.__default_tables
+        self.__tables = schema if schema else DEFAULT_TABLES
         if main_handler:
             print("\n\nCreating Tables...\n\n")
             self.__create_tables()
