@@ -22,49 +22,6 @@ class BaseDatabaseHandler(object):
         self.__database = sqlite3.connect(db_name)
         self.__cursor = self.__database.cursor()
         # In case we want to change the database at somepoint
-        self.__default_tables = {
-            # Should be valid and dynamically compatible
-            "sms": {
-                "content": "TEXT",  # Common
-                'number': "TEXT",  # Common
-                'date': "TEXT",  # Common (Change to datetime)
-                'first_contact': "TEXT",  # Common
-                'read': "TEXT",  # Common
-                'db_id': "INTEGER",  # Common
-                'sent': "TEXT",  # Common
-                'received': "TEXT",  # Common
-                'direction': "INTEGER",  # Common,
-                'id': "TEXT",
-                # Integer because of constants
-                "object_type": "INTEGER"  # 1 # Common
-            },
-            "mms": {
-                "content": "TEXT",
-                'number': "TEXT",
-                'date': "TEXT",
-                'first_contact': "TEXT",
-                'read': "TEXT",
-                'db_id': "INTEGER",
-                'direction': "INTEGER",
-                'content_type': "TEXT",  # UNCOMMON
-                'extension': "TEXT",  # UNCOMMON
-                'type': "INTEGER",
-                'id': "TEXT",
-                "object_type": "INTEGER"  # 2
-            },
-            "users": {
-                'db_id': "INTEGER",
-                'username': "TEXT",  # UNCOMMON
-                'password': "TEXT", # ENCRYPT ME
-                "object_type": "INTEGER"  # 3
-            },
-            "contacts": {
-                'db_id': "INTEGER",
-                'name': "TEXT",  # UNCOMMON
-                'number': "TEXT",
-                "object_type": "INTEGER"  # 4
-            },
-        }
         self.__tables = schema if schema else self.__default_tables
         if main_handler:
             print("\n\nCreating Tables...\n\n")
@@ -245,7 +202,7 @@ class BaseDatabaseHandler(object):
 
     # Utilities
 
-    def __create_table(
+    def _create_table(
             self, table_name: str,
             info: typing.Dict[str, str]
         ) -> None:
@@ -314,7 +271,7 @@ class BaseDatabaseHandler(object):
             if self.__table_exists(table_name):
                 continue
             else:
-                self.__create_table(table_name, col_info)
+                self._create_table(table_name, col_info)
 
     def __table_exists(self, table_name: str) -> bool:
         try:
@@ -512,7 +469,6 @@ class DatabaseHandler(BaseDatabaseHandler):
 
     def get_all_users(self):
         users = self._execute_sql("SELECT * FROM users;", return_results=True)
-        print(users)
         return users
 
     def create_user(self, data: typing.Dict[str, str], return_mapped=True) -> User:
@@ -520,15 +476,18 @@ class DatabaseHandler(BaseDatabaseHandler):
         Take in a dictionary where the keys are the fields
         and their values are the values to be inserted into
         the DB.
-        NOTE: Both fields are required in the user_sids table
+        NOTE: Both fields are required in the users table
         example dict:{
                         "username": "some username",
                         "password": "some password"
                     }
-
-        :param data: Dictionary whose keys are fields and values are
+        :Args:
+            - data: Dictionary whose keys are fields and values are
             the values to insert into the corresponding columns
-        :return: User object
+            - return_mapped: If True, return the user object we created
+
+        :Returns:
+            User object
         """
         return self._create_record(
             self.get_table_name('User'), data
