@@ -1,4 +1,3 @@
-from re import I
 import requests
 from copy import deepcopy
 from datetime import datetime
@@ -427,25 +426,6 @@ class ApiHandler(object):
         acc_info = json.loads(res.content)
         time.sleep(0.5)
         return Account(acc_info)
-    
-    def update_number(self, area_code):
-        acc = self.get_account_info()
-        if acc.account_status == "ENABLED":
-            raise Exception("Can't get new number. Account is still enabled.")
-
-        url = URLBuilder(self.user, "accept").url
-        accept_res = self.session.post(url, headers=self.headers, cookies=self.cookies)
-        print(accept_res)
-
-        url = URLBuilder(self.user, "update_number").url
-        data = {
-            "area_code": area_code
-        }
-        res = self.session.put(url, headers=self.headers, cookies=self.cookies, json=data)
-        print(res)
-        print(res.text)
-        time.sleep(0.5)
-        return res.text
 
     def await_response(self, number, timeout_bool=True):
         """
