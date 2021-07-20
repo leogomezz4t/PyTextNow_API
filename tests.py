@@ -1,4 +1,4 @@
-from pytextnow.TNAPI import Client
+from pytextnow.TNAPI import CellPhone
 import random
 import os
 import secrets
@@ -316,7 +316,7 @@ class ClientTest(object):
     def __init__(self) -> None:
         # Test RoboBoi.choose_account(), and DB setup right away
         print("\n\nInstantiating Client. Tests DB handler & robot\n\n")
-        self.client = Client()
+        self.client = CellPhone()
         # Test sms
         print("All objects created successfully, starting tests...")
         self.test()
