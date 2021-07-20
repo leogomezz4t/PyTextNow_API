@@ -1,3 +1,4 @@
+from re import I
 import requests
 from copy import deepcopy
 from datetime import datetime
@@ -23,6 +24,7 @@ from pytextnow.TN_objects.message import Message
 from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
 from pytextnow.tools.constants import MESSAGE_TYPE
 from pytextnow.TN_objects.account import Account
+import time
 
 class URLBuilder:
     def __init__(
@@ -49,6 +51,8 @@ class URLBuilder:
         :Return:
             - A string that will be appended to the base url to query the Text Now API
         """
+        self.user = user
+
         self.version_endpoints = {
             "default": "https://www.textnow.com/api/",
             "v1": "https://www.textnow.com/api/v1/",
@@ -64,7 +68,8 @@ class URLBuilder:
             "page_size": "100",
             "get_archived": "1",
             "msg_type": "2",
-            "message_type": "2"
+            "message_type": "2",
+            "strict": "0"
         }
         self.user_query = {}
         self.apis = {
@@ -118,6 +123,18 @@ class URLBuilder:
                 "endpoint": "v3",
                 "params": [
                     "message_type"
+                ]
+            },
+            "accept": {
+                "url": f"users/{user.username}/accept_e911",
+                "endpoint": "default",
+                "params": []
+            },
+            "update_number": {
+                "url": f"users/{user.username}/phone",
+                "endpoint": "default",
+                "params": [
+                    "strict"
                 ]
             }
         }
@@ -403,6 +420,25 @@ class ApiHandler(object):
 
         acc_info = json.loads(res.content)
         return Account(acc_info)
+    
+    def get_new_number(self, area_code):
+        acc = self.get_account_info()
+        if acc.account_status == "ENABLED":
+            raise Exception("Can't get new number. Account is still enabled.")
+
+        url = URLBuilder(self.user, "accept").url
+        accept_res = self.session.post(url, headers=self.headers, cookies=self.cookies)
+        print(accept_res)
+
+        url = URLBuilder(self.user, "update_number").url
+        data = {
+            "area_code": area_code
+        }
+        res = self.session.put(url, headers=self.headers, cookies=self.cookies, json=data)
+        print(res)
+        print(res.text)
+
+        return res.text
 
     def await_response(self, number, timeout_bool=True):
         
