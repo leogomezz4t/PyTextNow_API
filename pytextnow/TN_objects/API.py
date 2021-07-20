@@ -246,9 +246,9 @@ class ApiHandler(object):
     def __init__(self, user) -> None:
         self.user = user
 
-        self.__db_handler = DatabaseHandler(db_name="text_nowAPI.sqlite3")
+        self.__db_handler = DatabaseHandler()
         self.cookies = {
-            'connect.sid': self.user.sid
+            'connect.sid': user.sid
         }
         # At this point, is there any use for this?
         #self.allowed_events = self.events.registered_events
