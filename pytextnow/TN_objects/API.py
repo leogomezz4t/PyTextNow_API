@@ -421,7 +421,7 @@ class ApiHandler(object):
         acc_info = json.loads(res.content)
         return Account(acc_info)
     
-    def get_new_number(self, area_code):
+    def update_number(self, area_code):
         acc = self.get_account_info()
         if acc.account_status == "ENABLED":
             raise Exception("Can't get new number. Account is still enabled.")
