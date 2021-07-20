@@ -1,3 +1,4 @@
+from re import I
 import requests
 from copy import deepcopy
 from datetime import datetime
@@ -23,6 +24,7 @@ from pytextnow.TN_objects.message import Message
 from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
 from pytextnow.tools.constants import MESSAGE_TYPE
 from pytextnow.TN_objects.account import Account
+import time
 
 class URLBuilder:
     def __init__(
@@ -49,6 +51,8 @@ class URLBuilder:
         :Return:
             - A string that will be appended to the base url to query the Text Now API
         """
+        self.user = user
+
         self.version_endpoints = {
             "default": "https://www.textnow.com/api/",
             "v1": "https://www.textnow.com/api/v1/",
@@ -64,7 +68,8 @@ class URLBuilder:
             "page_size": "100",
             "get_archived": "1",
             "msg_type": "2",
-            "message_type": "2"
+            "message_type": "2",
+            "strict": "0"
         }
         self.user_query = {}
         self.apis = {
@@ -118,6 +123,18 @@ class URLBuilder:
                 "endpoint": "v3",
                 "params": [
                     "message_type"
+                ]
+            },
+            "accept": {
+                "url": f"users/{user.username}/accept_e911",
+                "endpoint": "default",
+                "params": []
+            },
+            "update_number": {
+                "url": f"users/{user.username}/phone",
+                "endpoint": "default",
+                "params": [
+                    "strict"
                 ]
             }
         }
@@ -257,7 +274,7 @@ class ApiHandler(object):
         
         url = URLBuilder(self.user, "sms").url
         res = self.session.post(url, headers=self.headers, cookies=self.cookies, json=json)
-
+        time.sleep(0.5)
         return res
 
     def send_mms(self, number, filepath):
@@ -301,6 +318,7 @@ class ApiHandler(object):
 
             send_file_req = self.session.post(URLBuilder(self.user, "send_attachment").url, data=json_data,
                                                 headers=self.headers, cookies=self.cookies)
+            time.sleep(0.5)
             return send_file_req
 
     def get_new_messages(self, newest=True, from_="", raw=False):
@@ -333,6 +351,9 @@ class ApiHandler(object):
                 url,
                 headers=self.headers, cookies=self.cookies
             ).content)
+        
+        time.sleep(0.5)
+
         if raw:
             return result_json
         return map_to_class(data_dicts=result_json, multiple=True)
@@ -348,7 +369,7 @@ class ApiHandler(object):
         url = URLBuilder(self.user, "contacts").url
         res = self.session.get(url, headers=self.headers, cookies=self.cookies)
         contacts = json.loads(res.content)
-
+        time.sleep(0.5)
         return contacts["result"]
 
     def get_raw_messages(self, all=False):
@@ -372,12 +393,13 @@ class ApiHandler(object):
                 if str(req.status_code).startswith("2"):
                     messages = json.loads(req.content)
                     all_messages.append(messages["messages"])
-
+            time.sleep(0.5)
             return all_messages["messages"]
         else:
             url = URLBuilder(self.user, "messages").url
             res = self.session.get(url, headers=self.headers, cookies=self.cookies)
             messages = json.loads(res.content)
+            time.sleep(0.5)
             return messages["messages"]
     
     def get_messages(self, all=False):
@@ -395,6 +417,7 @@ class ApiHandler(object):
         url = URLBuilder(self.user, "sip").url
         res = self.session.get(url, headers=self.headers, cookies=self.cookies)
         sip_info = json.loads(res.content)
+        time.sleep(0.5)
         return sip_info
 
     def get_account_info(self):
@@ -402,28 +425,29 @@ class ApiHandler(object):
         res = self.session.get(url, headers=self.headers, cookies=self.cookies)
 
         acc_info = json.loads(res.content)
+        time.sleep(0.5)
         return Account(acc_info)
+    
+    def update_number(self, area_code):
+        acc = self.get_account_info()
+        if acc.account_status == "ENABLED":
+            raise Exception("Can't get new number. Account is still enabled.")
+
+        url = URLBuilder(self.user, "accept").url
+        accept_res = self.session.post(url, headers=self.headers, cookies=self.cookies)
+        print(accept_res)
+
+        url = URLBuilder(self.user, "update_number").url
+        data = {
+            "area_code": area_code
+        }
+        res = self.session.put(url, headers=self.headers, cookies=self.cookies, json=data)
+        print(res)
+        print(res.text)
+        time.sleep(0.5)
+        return res.text
 
     def await_response(self, number, timeout_bool=True):
-        
-        for msg in self.get_unread_messages():
-            msg.mark_as_read()
-        timeout = datetime.now() + dt.timedelta(minute=10)
-        if not timeout_bool:
-            while 1:
-                # Slow down the requests because this is too many
-                unread_msgs = self.get_unread_messages()
-                filtered = unread_msgs.get(number=number)
-                if len(filtered) == 0:
-                    time.sleep(0.2)
-                    continue
-                return filtered[0]
-
-        else:
-            while datetime.now() > timeout:
-                unread_msgs = self.get_unread_messages()
-                filtered = unread_msgs.get(number=number)
-                if len(filtered) == 0:
-                    time.sleep(0.2)
-                    continue
-                return filtered[0]
+        """
+        Going to fill this in later. Have to adapt with new code.Still need this method for the functionality it provides.
+        """
