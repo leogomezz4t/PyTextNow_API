@@ -5,7 +5,6 @@ from pytextnow.TN_objects.API import ApiHandler
 from pytextnow.database.db import DatabaseHandler
 from pytextnow.tools.constants import *
 from pytextnow.tools.robot import RoboBoi
-from pytextnow.tools.server.app import ActiveCellPhoneTower
 from pytextnow.voip import VOIP
 
 class CellPhone:

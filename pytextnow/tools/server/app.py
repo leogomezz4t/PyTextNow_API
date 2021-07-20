@@ -3,7 +3,7 @@ from flask import Response, Flask, request
 from werkzeug.serving import make_server
 from logging import getLogger
 from pytextnow.database.db import DatabaseHandler
-from pytextnow.TN_objects.API import ListenerEvents
+
 class Listener(object):
 
     class __EndpointAction(object):
@@ -20,7 +20,6 @@ class Listener(object):
             return self.response
 
     def __init__(self):
-        self.__listener_events = ListenerEvents
         # Don't user the reloader so we can use this in a separate thread
         self. __app = Flask("RoboBoi-Event-Listener")
         self.__app.use_reloader = False
