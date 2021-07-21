@@ -5,6 +5,7 @@ from pytextnow.TN_objects.API import ApiHandler
 from pytextnow.database.db import DatabaseHandler
 from pytextnow.tools.constants import *
 from pytextnow.tools.robot import RoboBoi
+from pytextnow.voip import VOIP
 
 class CellPhone:
     """
@@ -35,6 +36,7 @@ class CellPhone:
         self.__user = self.__get_user_object(username)
         self.__api_handler = ApiHandler(self.__user)
         self.text_tone = ""
+        self._voip = None # Don't init now, will be used later if necessary
         if stay_alive:
             self.__robo_boi.start()
             #self.start_listening()
@@ -107,6 +109,11 @@ class CellPhone:
                             "\n\n!!!WARNING!!! CellPhone timed out while "
                             + "awaiting the result of %s" % (func_name)
                         )
+
+    def get_voip(self):
+        if self.__voip == None:
+            self.__voip = VOIP(self.__api_handler.get_sip_info())
+        return self.__voip
 
     def send_sms(self, number, text):
         self.__api_handler.send_sms(number, text)
