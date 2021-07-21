@@ -1,6 +1,0 @@
-# List of phone numbers to accept calls from, reject others.
-# Must be the full phone number, including country code,
-# without any spaces or special characters (other than a
-# single '+' at the beginning)
-ACCEPTED_NUMBERS = ["+15555555"]
-
