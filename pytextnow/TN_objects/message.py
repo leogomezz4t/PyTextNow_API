@@ -1,3 +1,4 @@
+from os import stat
 from dateutil import parser
 
 class Message:
@@ -9,7 +10,9 @@ class Message:
             self.first_contact = self.raw_obj['first_contact']
             self.direction = self.raw_obj["direction"]
             # Work around for no id on object creation
-            self.db_id = self.raw_obj.get('db_id')
+            self.db_id = self.raw_obj['db_id']
+            self.user_id = self.raw_obj['user_id']
+            self.contact_id = self.raw_obj['contact_id']
 
         else:
             self.first_contact = self.raw_obj["conversation_filtering"]["first_time_contact"]
@@ -24,3 +27,7 @@ class Message:
 
     def __str__(self):
         return f'<{self.__class__.__name__} number: {self.number}, content: {self.content}>'
+
+    @staticmethod
+    def cls_type():
+        return 0

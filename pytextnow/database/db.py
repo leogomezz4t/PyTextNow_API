@@ -1,3 +1,8 @@
+from copy import deepcopy
+import sqlite3
+import typing
+import os
+
 from pytextnow.TN_objects.container import Container
 from pytextnow.TN_objects.message import Message
 from pytextnow.TN_objects.multi_media_message import MultiMediaMessage
@@ -6,21 +11,25 @@ from pytextnow.TN_objects.user import User
 from pytextnow.tools.constants import *
 from pytextnow.tools.utils import map_to_class
 
-import sqlite3
-import typing
-import os
+
 
 class BaseDatabaseHandler(object):
     # CRUD
     def __init__(
             self, db_name: str = None,
             schema: typing.Dict[str, typing.Dict[str, str]] = {},
-            uneven_classes=True, main_handler= False
+            main_handler= False
     ) -> None:
         # Store the db in a pytextnow folder so everyone knows where these files came from
-        db_name = db_name or os.path.expanduser("~/./pytextnow/textnow.sqlite3")
+        db_name = db_name or os.path.expanduser("~/textnow.sqlite3")
         self.__database = sqlite3.connect(db_name)
         self.__cursor = self.__database.cursor()
+        # Make sure foreign keys are enabled
+        if not self.__cursor.execute("PRAGMA foreign_keys;"):
+            self.__cursor.execute("PRAGMA foreign_keys = ON;")
+            # Ensure it actually worked
+            if not self.__cursor.execute("PRAGMA foreign_keys;"):
+                raise Exception("Failed to enable foreign key relations on database!")
         # In case we want to change the database at somepoint
         self.__tables = schema if schema else DEFAULT_TABLES
         if main_handler:
@@ -30,7 +39,8 @@ class BaseDatabaseHandler(object):
 
     def _create_record(
             self, table_name: str,
-            info: typing.Dict[str, str]
+            info: typing.Dict[str, str],
+            return_mapped=True
         ) -> None:
         if info.get('db_id', None):
             raise Exception(
@@ -43,11 +53,6 @@ class BaseDatabaseHandler(object):
         safe_values = []
         for column, value in info.items():
             safe_values.append(value)
-            # WHY?! This makes no sense
-#            if type(value) == type(int()):
- #               safe_values.append(value)
-  #          else:
-   #             safe_values.append(value)
             columns += f"{column}" + ", "
         # Gives back (one, two, three)
         safe_columns = f"{self._clean_query(columns)}"
@@ -56,6 +61,16 @@ class BaseDatabaseHandler(object):
         )
         return self._execute_sql(sql, commit=True, return_results=True)
 
+    def get_db_id_field(self, table_name):
+        classes = [
+            Message, MultiMediaMessage,
+            User, Contact
+        ]
+        for name, tbl_name in self.__table_names.items():
+            if tbl_name == table_name:
+                return FK_FIELDS[name]
+        raise Exception("\n\nFailed to get db_id field!\n\n")
+
     def filter(
             self, table_name: str,
             filters: typing.Dict[str, typing.Union[str, int, bool]]
@@ -63,32 +78,98 @@ class BaseDatabaseHandler(object):
         """
         Filter a table based on the given parameters
         
-        :param table_name: String name of the table to operate on
-        :param filters: Dictionary of key value pairs where keys are
-            fields and their values are the ones we will use to find
-            the desired records.
-        :return: Any TN_Object
+        :Args:
+            - table_name: String name of the table to operate on
+            - filters: Dictionary of key value pairs where keys are
+                fields and their values are the ones we will use to find
+                the desired records.
+        
+        :Returns:
+            - Any TN_Object
         """
+        # joins with users and contacts makes sense, the other two don't
+        joins = {
+            "user": "INNER JOIN users u",
+            "contacts": "INNER JOIN contacts c"
+        }
+        ons = {
+            "user": "ON %s.user_id = u.user_id",
+            "contact": "ON %s.contact_id = c.contact_id"
+        }
+        id_fields = {
+            "user": "user_id",
+            "contact": "contact_id",
+            "sms": "sms_id",
+            "mms": "mms_id"
+        }
+        # Replace query names with DB fields
+        for field, value in id_fields.items():
+            if field in filters.keys():
+                filters[value] = filters[field]
+                filters.pop(field)
+        if 'db_id' in filters:
+            db_id_field = self.get_db_id_field(table_name)
+            filters[db_id_field] = filters['db_id']
+            filters.pop('db_id')
         # Using a filter with a trailing ", " causes an error
         # therefore it's unsafe until that's stripped off
         unsafe_filters = ""
+        alias = table_name[0]
+        filters_cpy = deepcopy(filters)
         for column, value in filters.items():
-            unsafe_filters += f"{column}='{value}', "
+            if "user" in table_name:
+                unsafe_filters += f"{column}='{value}' "
+            else:
+                unsafe_filters += f"{alias}.{column}='{value}' "
+
+            filters_cpy.pop(column)
+            if len(list(filters.keys())) > 1:
+                unsafe_filters +="AND "
+        # SELECT * <-- We want all the attributes
+        # FROM {table_name} <-- We want to start searching records
+                        # from this table or we want to use stuff from this table
+        #   INNER JOIN {table2} <-- We want to include this table in the search 
+        #   ON {table_name}.{field} = {table2}.{field} * N <-- Find records whose FKs match
         safe_filters = self._clean_query(unsafe_filters)
-        sql = """SELECT * 
-        FROM %s 
-        WHERE %s;""" % (table_name, safe_filters)
+        if 'user' not in table_name:
+            join_on = ""
+            if 'contact' in filters.keys():
+                join_on += joins.get('contacts')
+                join_on += ons.get('contacts')
+            for field, value in filters.items():
+                if field in ons.keys():
+                    # Use \t for readability in debugs
+                    join_on += "\n"+ joins.get(field) +"\n"+ ons.get(field) % (
+                        table_name[0]
+                    )
+            sql = """SELECT *
+            FROM %s u
+            INNER JOIN %s %s
+            %s
+            ON %s.user_id = u.user_id
+            WHERE %s""" % (
+                 self.get_table_name("User"),
+                 table_name, alias,
+                 join_on,
+                 alias,
+                 safe_filters,
+            )
+        else:
+            sql = """SELECT *
+                FROM %s 
+                WHERE %s""" % (table_name, safe_filters)
         return self._execute_sql(sql, return_results=True)
+
 
     def _update_obj(self, table_name: str, db_id: int, new_data: typing.Dict[str, str], return_obj=True) -> None:
         """
         Update an object
         
-        :param table_name: The name of the table as a string
-        :param new_data: Dict where keys are columns and values are their new values
+            - table_name: The name of the table as a string
+            - new_data: Dict where keys are columns and values are their new values
         :return: db_id
         """
-
+        db_id_field = self.get_db_id_field(table_name)
         self._validate_data(table_name, new_data)
         ordered_values = []
         set_data = ""
@@ -97,8 +178,9 @@ class BaseDatabaseHandler(object):
         set_data = self._clean_query(set_data)
         sql = """ UPDATE %s
         SET %s
-        WHERE db_id = %s;""" % (
-            table_name, set_data, db_id
+        WHERE %s = %s;""" % (
+            table_name, set_data,
+            db_id_field, db_id
         )
 
         if return_obj:
@@ -111,7 +193,7 @@ class BaseDatabaseHandler(object):
                 f"""
                 SELECT *
                 FROM {table_name}
-                WHERE db_id = {db_id};
+                WHERE {db_id_field} = {db_id};
                 """, return_results=True
             )
             try:
@@ -123,7 +205,7 @@ class BaseDatabaseHandler(object):
             except Exception as e:
                 # 
                 print(
-                    "\n\n!!!WARNING!!! Uncaught exception in __BasedatabaseHandler._update_obj() "
+                    "\n\n!!!WARNING!!! Uncaught exception in BasedatabaseHandler._update_obj() "
                     "ERROR: ", e,
                     "\n\nReturning None...\n"
                 )
@@ -134,74 +216,20 @@ class BaseDatabaseHandler(object):
             return_results=False
         )
 
-    def __bulk_update(
-            self,
-            table_data: typing.Dict[str, typing.Dict[str, str]],
-            return_objs: bool = False
-    ) -> typing.Union[Container, None]:
-        """
-        Construct update operations then execute and commit the
-        changes after fully building out the sql command
-
-        :param data: A dictionary whose outer most keys are table names and values
-            are a dictionary of data whos keys are field names and values
-            are the new values to be inserted
-        """
-        if len(table_data.keys()) == 0 or len(table_data.values()):
-            raise Exception(
-                "ERROR: The data dictionary cannot be empty! "
-                "Location: db.py -> DatabaseHandler -> bulk_update()"
-            )
-        results = []
-        # Each table gets its own update statement
-        for table_name, data in table_data.items():
-            # Validation
-            self._validate_data(table_name, data)
-            db_id = data.get('db_id', None)
-            if not db_id:
-                raise Exception(
-                    f"ERROR: You must pass DB_IDs with every object you wish to update! "
-                    "Location: db.py -> DatabaseHandler -> bulk_update()"
-                )
-            # Construct Query
-            base_query = f"UPDATE {table_name}"
-            set_clause = "SET "
-            where_clause = f"WHERE db_id = {db_id}"
-            set_data = []
-            for column, value in data.items():
-                set_clause + f"{column} = ?, "
-                set_data.append("'" + value + "'")
-            # Clean the query
-            clean_set_clause = self._clean_query(set_clause)
-            # Produces
-            # UPDATE user_sids SET username = some_username, sid = some_sid WHERE id = 2;
-            # Execute the query
-            results.append(self._execute_sql(
-                f"""{base_query}
-                {clean_set_clause}
-                {where_clause}
-                ;""",
-                tuple(set_data),
-                commit=True,
-                return_results=return_objs
-            ))
-        if return_objs:
-            return Container(results)
-
     def _delete_obj(self, table_name: str, db_id: int) -> None:
         """
         Delete an object
 
-        :param table_name: The name of the table as a string
-        :param db_id: The DB_ID of the object to delete
+            - table_name: The name of the table as a string
+            - db_id: The DB_ID of the object to delete
         """
+        db_id_field = self.get_db_id_field(table_name)
         self._execute_sql(
-            f'DELETE FROM {table_name} WHERE db_id={db_id}',
+            f'DELETE FROM {table_name} WHERE {db_id_field}={db_id}',
             return_results=False, commit=True
         )
 
     # Utilities
-
     def _create_table(
             self, table_name: str,
             info: typing.Dict[str, str]
@@ -216,25 +244,37 @@ class BaseDatabaseHandler(object):
         # Add the id row if one wasn't passed
         db_id_done = False
         for column, col_type in info.items():
+            doing_relations = False
+            if column == "relations":
+                doing_relations = True
+                relation_lines = ""
+                for line_start, line_end in col_type.items():
+                    if len(relation_lines) == 0:
+                        relation_lines = line_start  + line_end+", "
+                    else:
+                        relation_lines += line_start+line_end+", "
             # If the table already exits don't add another one lest we
             # get an error or mess up a stable database
             if self.__table_exists(table_name):
-                print(f"Table {table_name} already exists")
                 continue
             # Ensure IDs are unique, never none, auto increment and are defined
             # as primary keys
-            if column == "db_id" and not db_id_done:
+            if "_id" in column and not db_id_done:
                 vals += f"{column} {col_type} NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT, "
                 db_id_done = True
                 continue
-                # Ensure important data is unique and not none
+            # Ensure important data is unique and not none
             if column in [
                 "number", "phone_number",
-                "sid", "username"
+                "username"
             ]:
                 vals += f"{column} {col_type} NOT NULL UNIQUE, "
                 continue
-            vals += f"{column} {col_type}, "
+            # Monkey patch..This...should?...work?...right?
+            if not doing_relations:
+                vals += f"{column} {col_type}, "
+            else:
+                vals += relation_lines
         vals = self._clean_query(vals)
         vals += ")"
         # If all the tables already exist, stripping out the ()
@@ -254,7 +294,7 @@ class BaseDatabaseHandler(object):
             Message,
             MultiMediaMessage,
             Contact,
-            User,
+            User
         ]
         names = {}
         for obj in objs:
@@ -275,7 +315,7 @@ class BaseDatabaseHandler(object):
 
     def __table_exists(self, table_name: str) -> bool:
         try:
-            results = self._execute_sql("SELECT * FROM %s;" % (table_name), return_results=True)
+            results = self._execute_sql("SELECT * FROM %s;" % (table_name), return_results=False)
             return True
         except sqlite3.OperationalError:
             return False
@@ -285,8 +325,9 @@ class BaseDatabaseHandler(object):
     def _clean_query(self, sql_string: str) -> str:
         if sql_string.endswith(", "):
             return sql_string[:len(sql_string) - 2]
+        elif sql_string.endswith("AND "):
+            return sql_string[:len(sql_string) - 4]
         else:
-            print("No need to string the trailing ', ' as it doesn't exist")
             return sql_string
 
     def _execute_sql(
@@ -295,7 +336,10 @@ class BaseDatabaseHandler(object):
             return_class: bool = False,
             return_raw: bool = False, return_results: bool = True,
             commit: bool = False
-        ):
+        ) -> typing.Union[
+            None,
+            Container
+        ]:
         """
         A wrapper to execute any SQL. This is used to keep from
         having connections and such scattered through the class
@@ -303,19 +347,24 @@ class BaseDatabaseHandler(object):
         try/excepts
         If no params are set to True, try to return a Results/Result object
 
-
-        :param sql: The SQL to be executed        
-        :param values: Values to be parameter bound to the sql command if any
-        :param return_id: If True, return the db_id of the last created object    
-        :param map_to_class: If True return a class corresponding to the type
-            of object we're getting from the database whos attributes are
-            filled by the information returned from the query
-        :param return_class: If True, return an uninstantiated class corresponding
+        :Args:
+            - sql: The SQL to be executed        
+            - values: Values to be parameter bound to the sql command if any
+            - return_id: If True, return the db_id of the last created object    
+            - map_to_class: If True return a class corresponding to the type
+                of object we're getting from the database whos attributes are
+                filled by the information returned from the query
+            - return_class: If True, return an uninstantiated class corresponding
             to the type of object we're getting
-        :param return_raw: If True, return the raw data returned from the database operation
+            - return_raw: If True, return the raw data returned from the database operation
+
+        :Returns:
+            - None
+            - Any TN Object except Account
+            - Integer (Last database id)
+            - Raw database results
         """
         try:
-            # print("\n\nSQL COMMAND:", sql, "\n\n")
             # If we're not commiting, we want the results for sure
             if values:
                 results = self.__cursor.execute(sql, values)
@@ -335,7 +384,6 @@ class BaseDatabaseHandler(object):
                 return results
             # No results, return the empty list
             elif len(dicts) == 0:
-                # print("Empty results")
                 return dicts
             elif return_results:
                 return Container(
@@ -344,8 +392,6 @@ class BaseDatabaseHandler(object):
                         multiple=True
                     )
                 )
-
-            print("No arguments were True, not returning anything...")
             return
 
         except sqlite3.OperationalError as e:
@@ -355,7 +401,7 @@ class BaseDatabaseHandler(object):
 
     def _validate_data(
             self, table_name, data: typing.Dict[str, typing.Dict[str, str]]
-    ) -> None:
+        ) -> None:
         """
         Ensure we have the correct data in the correct format
         so we don't get a failed commit
@@ -383,8 +429,11 @@ class BaseDatabaseHandler(object):
         for field, field_type in self.__tables.get(self.get_table_name(cls_name)).items():
             try:
                 # Attempt to cast the data to the type its field requires
-                f_type = col_types.get(field_type)(data.get(field))
-            except:
+                for string, c_type in col_types.items():
+                    if string in field_type:
+                        e = c_type(data.get(field))
+                #f_type = col_types.get(field_type)(data.get(field))
+            except Exception as e:
                 invalid_field = invalid_fields.get(field)
                 if type(data.get(field)) == type(None):
                     # Null values...
@@ -397,17 +446,17 @@ class BaseDatabaseHandler(object):
                     invalid_fields[field].append(error)
                 else:
                     invalid_fields[field] = [error]
-        if len(list(invalid_fields.keys())):
+        if len(list(invalid_fields.keys())) > 0:
             print("\n\n!!!ERROR INVALID DATA!!!\n")
             for field, err in invalid_fields.items():
-                print("Showing errors for field: ", field)
+                print("\nShowing errors for field: ", field)
                 print(err)
             quit()
         return True
 
     def __dict_factory(
             self, results: typing.List[sqlite3.Row]
-    ) -> typing.List[typing.Dict[str, str]]:
+        ) -> typing.List[typing.Dict[str, str]]:
         """
         Convert a list of query results into a dictionary
         add them to a list and return it
@@ -447,7 +496,7 @@ class BaseDatabaseHandler(object):
                 "DatabaseHandler -> __close_connection()"
             )
 
-    def get_table_name(self, obj_name):
+    def get_table_name(self, obj_name=None):
         """
         Get the table name that was given
         """
@@ -512,8 +561,8 @@ class DatabaseHandler(BaseDatabaseHandler):
         """
         Update a user record in the database
 
-        :param db_id: User's database ID
-        :param new_data: Dictionary whose keys are fields and values
+            - db_id: User's database ID
+            - new_data: Dictionary whose keys are fields and values
             are the new values for the field.
             MUST contain a key 'db_id' with an integer value of an existing object
         """
@@ -582,7 +631,7 @@ class DatabaseHandler(BaseDatabaseHandler):
             info_dict, return_obj=True,
     ) -> typing.Union[None, Contact]:
         """
-        :param info_dict: Dictionary with new information to update the record with
+            - info_dict: Dictionary with new information to update the record with
             MUST contain a key 'db_id' with an integer value of an existing object
         """
         if return_obj:
@@ -601,15 +650,15 @@ class DatabaseHandler(BaseDatabaseHandler):
             )
         ).first()
 
-    def create_sms(self, data):
-        self._create_record(self.get_table_name('Message'), data)
+    def create_sms(self, data, return_mapped=True):
+        self._create_record(self.get_table_name('Message'), data, return_mapped)
 
     def get_all_sms(self, sent=False, received=True):
         """
         Get and return ALL sms
 
-        :param sent_only: If True, only get sms that the user sent
-        :param received_only: Default of True, If True, return only sms the user received
+            - sent_only: If True, only get sms that the user sent
+            - received_only: Default of True, If True, return only sms the user received
             ordered by the time they were received (newest first)
         """
         if sent:
@@ -628,7 +677,7 @@ class DatabaseHandler(BaseDatabaseHandler):
         to filter by dates. Use str(date_object)
 
 
-        :param filters: A dictionary of conditions to be met 
+            - filters: A dictionary of conditions to be met 
             key = field name, value is it's expected value
         """
         return self.filter(self.get_table_name('Message'), filters)

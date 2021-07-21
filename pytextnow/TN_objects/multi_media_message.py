@@ -18,6 +18,9 @@ class MultiMediaMessage(Message):
             self.raw_data = {}
             self.content_type = self.raw_obj['content_type']
             self.extension = self.raw_obj['extension']
+            self.db_id = self.raw_obj['db_id']
+            self.user_id = self.raw_obj['user_id']
+            self.contact_id = self.raw_obj['contact_id']
         self.type = MULTIMEDIA_MESSAGE_TYPE
 
     def mv(self, file_path=None):
@@ -25,3 +28,7 @@ class MultiMediaMessage(Message):
             file_path = f"./file.{self.extension}"
         with open(file_path, mode="wb") as f:
             f.write(self.raw_data)
+
+    @staticmethod
+    def cls_type():
+        return 1

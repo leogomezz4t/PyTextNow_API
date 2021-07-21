@@ -39,45 +39,44 @@ class RoboBoi(object):
          #   target=self.__please_wait,
           #  daemon=True
         #)
-        if start:
-            self.start()
+        #if start:
+         #   self.start()
     
     def start(self):
         # Start the thread to keep chrome open
         threading.Thread(target=self.__drive, daemon=True).start()
-        # Start the server thread
-        self.__server = Listener()
-        self.__server.start()
 
     def __drive(self):
         self.__driving = True
         print("\n\nStarting to drive the robot...")
         with self.__driver:
-            next_refresh = random.uniform(settings.REFRESH_INTERVALS['lower'], settings.REFRESH_INTERVALS['upper'])
+            next_refresh = random.uniform(settings.REFRESH_INTERVALS['lower_limit'], settings.REFRESH_INTERVALS['upper_limit'])
             # Leave chrome running to keep the sid from changing (Valid for a month from last refresh)
             while self.__driving:
                 try:
                     # Refresh the page every 1 to 24 hours
                     if self.__time_on_page() > next_refresh:
-                        next_refresh = random.uniform(self.__ONE_HOUR, self.__DAY)
+                        next_refresh = random.uniform(ONE_HOUR*12, ONE_DAY)
                         self.__refresh()
-                except:
+                except Exception as e:
                     print("The Driver Experienced and exception some how...")
+                    print("\n\nERROR:", e)
                     break
+         # Not yet implemented
                 # Check for new things
-                with self.__r_lock:
-                    new = self.__server.get_new()
-                    if len(new) > 0:
-                        if len(self.to_be_updated) > 0:
-                            print(
-                                "\n\n!!!WARNING!!!\n\n You have not cleared the 'RoboBoi.to_be_updated"
-                                " list. Be sure you pay attention to execution order. This may get hard to debug!"
-                            )
+ #               with self.__r_lock:
+ #                   new = self.__server.get_new()
+  #                  if len(new) > 0:
+   #                     if len(self.to_be_updated) > 0:
+    #                        print(
+     #                           "\n\n!!!WARNING!!!\n\n You have not cleared the 'RoboBoi.to_be_updated"
+      #                          " list. Be sure you pay attention to execution order. This may get hard to debug!"
+       #                     )
                         # Check for new things
-                        self.to_be_updated = new
-        end = time.time() - self.__start_time / self.__MINUTE
-        self.__sigkill()
-        print("Closed browser...We've been driving the browser for {} minutes" % (str(end)))
+        #                self.to_be_updated = new
+        end = time.time() - self.__start_time / ONE_MINUTE
+        self.__driver.quit()
+        print("Closed browser...We've been driving the browser for %s minutes" % (str(end)))
 
     def get_new(self):
         with self.__r_lock:
@@ -121,6 +120,17 @@ class RoboBoi(object):
         :Returns:
             The value of the connect.sid cookie in the currently open browser
         """
+        print("\n\nAttempting to get sid\n\n")
+        if not self.__driving:
+            print("\n\n!!!WARNING: RoboBoi is not driving. Waiting 30 seconds for it to start driving!!!\n\n")
+            start = time.time()
+            while not self.__driving:
+                if time.time() - start >= 20:
+                    raise Exception(
+                        "\n\n!!!ERROR: RoboBoi tried to get a user SID BEFORE the "
+                        "browser was opened and logged in. Timed out after 20 seconds "
+                        "of waiting for RoboBoi to start driving!!!\n\n"
+                    )
         if not from_login:
             sid = self.__driver.get_cookie('connect.sid')
             # We must have been kicked off, log back in
@@ -305,7 +315,7 @@ class RoboBoi(object):
         """
         self.__last_refresh = time.time()
         self.__driver.get(url)
-        self.__driver.inject_script
+        #self.__driver.execute_script(self.__get_vital_js())
         return 
 
     def __refresh(self):

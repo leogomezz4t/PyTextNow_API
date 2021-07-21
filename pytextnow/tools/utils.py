@@ -22,34 +22,21 @@ def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False)
             "multiple=True and a list of data dictionaries "
             "Location: tools -> utils.py -> map_to_class()"
         )
-    print("Entering 'map_it' method!!")
-
     def __map_it(data_dict):
         objects = {
             MESSAGE_TYPE: Message,
             MULTIMEDIA_MESSAGE_TYPE: MultiMediaMessage,
             USER_TYPE: User,
-            CONTACT_TYPE: Contact
+            CONTACT_TYPE: Contact,
         }
         mapped_obj = None
         # The easy way...there's an object type :)
         if "object_type" in data_dict.keys():
-            time.sleep(2)
-
-            obj = objects.get(data_dict['object_type'])(from_db=True, **data_dict)
-            for attr, value in data_dict.items():
-                # Set the attr if it exists
-                if attr in TABLE_ATTRS.get(obj.__class__.__name__):
-                    setattr(obj, attr, value)
-                # Warn the developer and continue trying to map attrs
-                else:
-                    # Mainly a debug
-                    print(
-                        f"WARNING: Object of type {obj.__class__.__name__} "
-                        f"does not have the attribute {attr}. There may be "
-                        "missing information in your class!!"
-                        "\n\n!!!Disregard if updating a record or inserting an incomplete record!!!"
-                    )
+            # Get the FK Field then replace the one from the db
+            # with a normalized db_id attribute
+            fk_field = FK_FIELDS.get(objects.get(data_dict['object_type']).__name__)
+            data_dict['db_id'] = data_dict[fk_field]
+            obj = objects.get(data_dict['object_type'])(from_db=True, raw_obj=data_dict)
             return obj
         # Find the object we must map to
         if 'content' in list(data_dict.keys()) and 'extension' not in list(data_dict.keys()):
@@ -58,9 +45,8 @@ def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False)
             mapped_obj = objects.get(MULTIMEDIA_MESSAGE_TYPE)
         elif 'name' in list(data_dict.keys()):
             mapped_obj = objects.get(CONTACT_TYPE)
-        elif 'sid' in list(data_dict.keys()) or 'username' in list(data_dict.keys()):
+        elif 'password' in list(data_dict.keys()) or 'username' in list(data_dict.keys()):
             mapped_obj = objects.get(USER_TYPE)
-
         if not mapped_obj:
             raise Exception(
                 f"Failed to find object with one or more of the following attributes: {data_dict.keys()} "
@@ -85,15 +71,6 @@ def map_to_class(data_dict=None, data_dicts=None, multiple=False, or_none=False)
                 "Location: tools -> utils.py -> map_to_class()"
             )
     return __map_it(data_dict)
-
-
-def serialize(obj):
-    """
-    Syntactic sugar for turning a classes attributes into
-    a dictionary
-    """
-    return obj.__dict__.items()
-
 
 def date_to_str(dt_time):
     """

@@ -6,8 +6,14 @@ class Contact:
             self.number = self.raw_obj.get("contact_value")
         else:
             self.number = self.raw_obj.get('number')
+            self.db_id = self.raw_obj['db_id']
+            self.user_id = self.raw_obj['user_id']
         self.name = self.raw_obj.get("name")
 
     def __str__(self):
         s = f"<Contact number={self.number}, name={self.name}>"
         return s
+    
+    @staticmethod
+    def cls_type():
+        return 4

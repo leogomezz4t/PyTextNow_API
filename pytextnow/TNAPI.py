@@ -38,8 +38,8 @@ class CellPhone:
         self.text_tone = ""
         self._voip = None # Don't init now, will be used later if necessary
         if stay_alive:
-            self.__robo_boi._start()
-            self.start_listening()
+            self.__robo_boi.start()
+            #self.start_listening()
 
     def __get_user_object(self, username):
         user = None
@@ -47,6 +47,8 @@ class CellPhone:
             # Try to get the user with the DB Handler
             # This will be None if the user is not found.
             user = self.__db_handler.get_user(self.__user.username)
+            # Always get the sid from the login on startup
+            user.sid = self.__robo_boi.get_sid(user, True)
         if not user:
             # Have the user choose an account. Log in and assign the sid
             user = self.__robo_boi.choose_account(assign_sid=True)
@@ -112,3 +114,9 @@ class CellPhone:
         if self.__voip == None:
             self.__voip = VOIP(self.__api_handler.get_sip_info())
         return self.__voip
+
+    def send_sms(self, number, text):
+        self.__api_handler.send_sms(number, text)
+
+    def send_mms(self, number, file):
+        self.__api_handler.send_mms(number, file)

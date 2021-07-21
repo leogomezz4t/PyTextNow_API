@@ -1,3 +1,8 @@
+ONE_MINUTE = 60
+ONE_HOUR = ONE_MINUTE * 60
+ONE_DAY = ONE_HOUR * 24
+
+
 MESSAGE_TYPE = 0
 MULTIMEDIA_MESSAGE_TYPE = 1
 
@@ -5,6 +10,7 @@ MULTIMEDIA_MESSAGE_TYPE = 1
 USER_TYPE = 3
 CONTACT_TYPE = 4
 ACCOUNT_TYPE = 5
+
 SENT_MESSAGE_TYPE = 2
 RECEIVED_MESSAGE_TYPE = 1
 
@@ -19,6 +25,13 @@ TABLES_CLASSES = {
     'users': "User",
     'accounts': "Account"
 }
+FK_FIELDS = {
+    "User": "user_id",
+    "Message": "sms_id",
+    "MultiMediaMessage": "mms_id",
+    "Contact": "contact_id"
+}
+
 TABLE_ATTRS = {
     # I'm annoyed with figuring out how to get an uninstantiated classes
     # attributes so we're doing this for now
@@ -71,22 +84,13 @@ TABLE_ATTRS = {
                 'object_type',
                 # What user does this contact belong to?
                 "user_id"
-            ],
-            "Account": [
-
             ]
         }
 FALSE = 0
 TRUE = 1
 
 TN_MSG_PREV_LST_XPATH = "/html/body/div[1]/div/div[2]/div[2]/div[2]/div[2]/div[1]/div[2]/div/div/ul"
-FK_FIELDS = {
-    "User": "user_id",
-    "Message": "sms_id",
-    "MultiMediaMessage": "mms_id",
-    "Account": "account_id",
-    "Contact": "contact_id"
-}
+
 DEFAULT_TABLES = {
             "users": {
                 'user_id': "INTEGER",
@@ -145,14 +149,6 @@ DEFAULT_TABLES = {
                 "user_id": "INTEGER NOT NULL",
                 "relations": {
                     "FOREIGN KEY(user_id) ": "REFERENCES users(user_id)"
-                }
-            },
-            "accounts": {
-                "account_id": "INTEGER",
-                "user_id": "INTEGER NOT NULL",
-                "relations": {
-                    # Related Table
-                    "FOREIGN KEY(user_id) ": "REFRENCES users(user_id)"
                 }
             }
         }
