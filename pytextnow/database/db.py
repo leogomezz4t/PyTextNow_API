@@ -20,8 +20,7 @@ class BaseDatabaseHandler(object):
             schema: typing.Dict[str, typing.Dict[str, str]] = {},
             main_handler= False
     ) -> None:
-        # Store the db in a pytextnow folder so everyone knows where these files came from
-        db_name = db_name or os.path.expanduser("~/textnow.sqlite3")
+        db_name = db_name or os.path.expanduser("~/.pytextnow.sqlite3")
         self.__database = sqlite3.connect(db_name)
         self.__cursor = self.__database.cursor()
         # Make sure foreign keys are enabled
