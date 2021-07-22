@@ -36,7 +36,7 @@ class CellPhone:
         self.__user = self.__get_user_object(username)
         self.__api_handler = ApiHandler(self.__user)
         self.text_tone = ""
-        self._voip = None # Don't init now, will be used later if necessary
+        self.__voip = None # Don't init now, will be used later if necessary
         if stay_alive:
             self.__robo_boi.start()
             #self.start_listening()
