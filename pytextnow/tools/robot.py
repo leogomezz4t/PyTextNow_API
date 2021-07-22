@@ -106,6 +106,7 @@ class RoboBoi(object):
         if self.__proxy:
             options.add_argument("--proxy-server=%s" % self.__proxy)
         options.add_argument('--disable-extensions')
+        options.add_argument('--no-first-run')
 
         return Chrome(options=options)
     
