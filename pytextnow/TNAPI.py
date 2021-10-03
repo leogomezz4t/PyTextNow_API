@@ -26,7 +26,7 @@ SIP_ENDPOINT = "prod.tncp.textnow.com"
 
 
 class Client:
-    def __init__(self, username: str = None, cookie=None):
+    def __init__(self, username: str = None, sid_cookie=None, csrf_cookie=None):
         # Load SIDS
         self._user_sid = {}
         self._good_parse = False
@@ -44,22 +44,32 @@ class Client:
         self.allowed_events = ["message"]
 
         self.events = []
+        self.cookies = {}
 
         if self.username in self._user_sid.keys():
-            sid = cookie if cookie else self._user_sid[self.username]
+            sid = sid_cookie if sid_cookie else self._user_sid[self.username]['sid']
+            csrf = csrf_cookie if csrf_cookie else self._user_sid[self.username]['csrf']
             self.cookies = {
-                'connect.sid': sid
+                'connect.sid': sid,
+                '_csrf': csrf,
             }
-            self._user_sid[self.username] = sid
-            if cookie and not self._good_parse:
+            self._user_sid[self.username] = {
+                'sid': sid,
+                'csrf': csrf,
+            }
+            if sid_cookie and csrf_cookie and not self._good_parse:
                 with open(self._user_sid_file, "w") as file:
                     file.write(json.dumps(self._user_sid))
         else:
-            sid = cookie if cookie else login()
+            sid,csrf = sid_cookie,csrf_cookie if sid_cookie and csrf_cookie else login()
             self.cookies = {
-                'connect.sid': sid
+                'connect.sid': sid,
+                '_csrf': csrf,
             }
-            self._user_sid[self.username] = sid
+            self._user_sid[self.username] = {
+                'sid': sid,
+                'csrf': csrf,
+            }
             with open(self._user_sid_file, "w") as file:
                 file.write(json.dumps(self._user_sid))
 
@@ -67,6 +77,8 @@ class Client:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/88.0.4324.104 Safari/537.36 '
         }
+
+        self.get_initial_csrf_token()
 
         file.close()
 
@@ -85,6 +97,19 @@ class Client:
         atexit.register(on_exit)
 
     # Functions
+    def get_initial_csrf_token(self):
+        req = requests.get('https://www.textnow.com/messaging', headers=self.headers, cookies=self.cookies)
+
+        if req.status_code == 200:
+            resp = req.text
+            needle = 'csrf-token" content="'
+            needle_index = resp.find(needle)
+            token_start = needle_index + len(needle)
+            token_end = resp.find('"', token_start)
+            csrf_token = resp[token_start:token_end]
+
+            self.headers['x-csrf-token'] = csrf_token
+
     def auth_reset(self, cookie=None):
         with open(self._user_sid_file, "r") as user_SIDS_file:
             user_SIDS = json.loads(user_SIDS_file.read())
@@ -233,6 +258,12 @@ class Client:
 
         response = requests.post('https://www.textnow.com/api/users/' + self.username + '/messages',
                                  headers=self.headers, cookies=self.cookies, data=data)
+
+        if response.status_code == 200:
+            for cookie in response.cookies:
+                if cookie.name == 'XSRF-TOKEN':
+                    self.cookies['XSRF-TOKEN'] = cookie.value
+
         if not str(response.status_code).startswith("2"):
             self.request_handler(response.status_code)
         return response

@@ -4,5 +4,7 @@ def login():
     print("\n")
     print("Open application tab and copy connect.sid cookie and paste it here.")
     sid = input("connect.sid: ")
+    print("Open application tab and copy _csrf cookie and paste it here.")
+    csrf = input("_csrf")
 
-    return sid
+    return sid, csrf
