@@ -7,7 +7,6 @@ else:
     from pytextnow.multi_media_message import MultiMediaMessage
     from pytextnow.message import Message
 import mimetypes
-from re import M
 import requests
 from datetime import datetime, time
 from dateutil.relativedelta import relativedelta
@@ -31,7 +30,7 @@ class Client:
         # Load SIDS
         self._user_cookies = {}
         self._good_parse = False
-        self._user_cookies_file = join(dirname(realpath(__file__)), 'user_sids.json')
+        self._user_cookies_file = join(dirname(realpath(__file__)), 'user_cookies.json')
 
         try:
             with open(self._user_cookies_file, 'r') as file:
