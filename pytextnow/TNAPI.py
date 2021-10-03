@@ -112,7 +112,7 @@ class Client:
         else:
             raise FailedRequest(req.status_code)
 
-    def auth_reset(self, cookie=None):
+    def auth_reset(self, sid_cookie=None, csrf_cookie=None):
         with open(self._user_cookies_file, "r") as user_cookie_file:
             user_cookies = json.loads(user_cookie_file.read())
 
@@ -122,10 +122,13 @@ class Client:
             with open(self._user_cookies_file, "w") as user_cookies_file:
                 user_cookies_file.write(json.dumps(user_cookies))
 
-            self.__init__(self.username, cookie)
+            self.__init__(self.username, sid_cookie=sid_cookie, csrf_cookie=csrf_cookie)
         else:
-            if cookie:
-                user_cookies[self.username] = cookie
+            if sid_cookie and csrf_cookie:
+                user_cookies[self.username] = {
+                    "sid": sid_cookie,
+                    "csrf": csrf_cookie
+                    }
                 with open(self._user_cookies_file, "w") as user_cookies_file:
                     user_cookies_file.write(json.dumps(user_cookies))
                 self.__init__(self.username)
