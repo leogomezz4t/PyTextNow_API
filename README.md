@@ -165,6 +165,11 @@ while 1:
 
 ## Patch Notes
 
+### 1.1.8
+- Fixed 'Messgage not sending' error
+- Added new required cookie
+- `csrf_token` header is automatically fetched
+
 ### 1.1.7
 - Added get_username.mp4 video
 - Changed Client system from email to username. You now input your textnow username instead of email.
