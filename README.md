@@ -165,6 +165,9 @@ while 1:
 
 ## Patch Notes
 
+### 1.1.9
+- Updated MANIFEST
+
 ### 1.1.8
 - Fixed 'Messgage not sending' error
 - Added new required cookie
