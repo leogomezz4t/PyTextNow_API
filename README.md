@@ -31,8 +31,8 @@ pip install PyTextNow
 ```python
 import pytextnow
 
-# Way 1. Include connect.sid cookie in the constructor
-client = pytextnow.Client("username", cookie="sid").
+# Way 1. Include connect.sid and csrf cookie in the constructor
+client = pytextnow.Client("username", sid_cookie="sid", csrf_cookie="csrf").
 
 # Way 2. Just instantiate and a prompt will appear on the command line
 
@@ -123,7 +123,7 @@ for unread in unreads:
 ```python
 import pytextnow as pytn
 
-client = pytn.Client("username", cookie="connect.sid")
+client = pytn.Client("username", sid_cookie="connect.sid", csrf_token="_csrf")
 
 @client.on("message")
 def handler(msg):
@@ -134,25 +134,6 @@ def handler(msg):
         else:
             msg.mv("test" + msg.extension)
 ``` 
-
-## Simple bot snippet | OUTDATED AND DEPRECATED
-```python
-import pytextnow as pytn
-import time
-
-client = pytn.Client("username", cookie="connect.sid")
-while 1:
-    unreads = client.get_unread_messages()
-    for msg in unreads:
-        msg.mark_as_read()
-        if msg.type == pytn.MESSAGE_TYPE:
-            if msg.content == "ping":
-                msg.send_sms("pong")
-        else:
-            msg.mv("test" + msg.extension)
-    
-    time.sleep(0.2)
-```
 
 ## Custom Module Exceptions
 
