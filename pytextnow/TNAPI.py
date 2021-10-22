@@ -251,6 +251,9 @@ class Client:
         """
             Sends an sms text message to this number
         """
+        if '\n' in text:
+            text = text.replace('\n', '\\n')
+
         data = \
             {
                 'json': '{"contact_value":"' + to + '","contact_type":2,"message":"' + text + '","read":1,'
