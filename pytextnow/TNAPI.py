@@ -61,7 +61,7 @@ class Client:
                 with open(self._user_cookies_file, "w") as file:
                     file.write(json.dumps(self._user_cookies))
         else:
-            sid,csrf = sid_cookie,csrf_cookie if sid_cookie and csrf_cookie else login()
+            sid,csrf = (sid_cookie,csrf_cookie) if sid_cookie and csrf_cookie else login()
             self.cookies = {
                 'connect.sid': sid,
                 '_csrf': csrf,
