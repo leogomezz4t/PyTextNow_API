@@ -15,6 +15,7 @@ import json
 from os.path import realpath, dirname, join
 import time
 import atexit
+import re
 
 MESSAGE_TYPE = 0
 MULTIMEDIA_MESSAGE_TYPE = 1
@@ -247,12 +248,14 @@ class Client:
         else:
             self.request_handler(file_url_holder_req.status_code)
 
+    def _replace_newlines(self, text):
+        return re.sub(r'(?<!\\)\n', r'\\n', text)
+
     def send_sms(self, to, text):
         """
             Sends an sms text message to this number
         """
-        if '\n' in text:
-            text = text.replace('\n', '\\n')
+        text = self._replace_newlines(text)
 
         data = \
             {
