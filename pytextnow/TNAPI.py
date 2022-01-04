@@ -8,6 +8,7 @@ else:
     from pytextnow.message import Message
 import mimetypes
 import requests
+import cloudscraper
 from datetime import datetime, time
 from dateutil.relativedelta import relativedelta
 
@@ -15,6 +16,8 @@ import json
 from os.path import realpath, dirname, join
 import time
 import atexit
+
+scraper = cloudscraper.create_scraper()
 
 MESSAGE_TYPE = 0
 MULTIMEDIA_MESSAGE_TYPE = 1
@@ -97,7 +100,7 @@ class Client:
 
     # Functions
     def get_initial_csrf_token(self):
-        req = requests.get('https://www.textnow.com/messaging', cookies=self.cookies)
+        req = scraper.get('https://www.textnow.com/messaging', cookies=self.cookies)
 
         if req.status_code == 200:
             resp = req.text
@@ -138,7 +141,7 @@ class Client:
         """
             This gets most of the messages both sent and received. However It won't get all of them just the past 10-15
         """
-        req = requests.get("https://www.textnow.com/api/users/" + self.username + "/messages", headers=self.headers,
+        req = scraper.get("https://www.textnow.com/api/users/" + self.username + "/messages", headers=self.headers,
                            cookies=self.cookies)
         if str(req.status_code).startswith("2"):
             messages = json.loads(req.content)
@@ -153,7 +156,7 @@ class Client:
         """
             This gets most of the messages both sent and received. However It won't get all of them just the past 10-15
         """
-        req = requests.get("https://www.textnow.com/api/users/" + self.username + "/messages", headers=self.headers,
+        req = scraper.get("https://www.textnow.com/api/users/" + self.username + "/messages", headers=self.headers,
                            cookies=self.cookies)
         if str(req.status_code).startswith("2"):
             messages = json.loads(req.content)
@@ -206,7 +209,7 @@ class Client:
         has_video = True if file_type == "video" else False
         msg_type = 2 if file_type is None else 2 if file_type == "image" else 4
 
-        file_url_holder_req = requests.get("https://www.textnow.com/api/v3/attachment_url?message_type=2",
+        file_url_holder_req = scraper.get("https://www.textnow.com/api/v3/attachment_url?message_type=2",
                                            cookies=self.cookies, headers=self.headers)
         if str(file_url_holder_req.status_code).startswith("2"):
             file_url_holder = json.loads(file_url_holder_req.text)["result"]
@@ -223,7 +226,7 @@ class Client:
                     "credentials": 'omit'
                 }
 
-                place_file_req = requests.put(file_url_holder, data=raw, headers=headers_place_file,
+                place_file_req = scraper.put(file_url_holder, data=raw, headers=headers_place_file,
                                               cookies=self.cookies)
                 if str(place_file_req.status_code).startswith("2"):
 
@@ -239,7 +242,7 @@ class Client:
                         "media_type": file_type
                     }
 
-                    send_file_req = requests.post("https://www.textnow.com/api/v3/send_attachment", data=json_data,
+                    send_file_req = scraper.post("https://www.textnow.com/api/v3/send_attachment", data=json_data,
                                                   headers=self.headers, cookies=self.cookies)
                     return send_file_req
                 else:
@@ -260,7 +263,7 @@ class Client:
                         self.username + '","has_video":false,"new":true,"date":"' + datetime.now().isoformat() + '"} '
             }
 
-        response = requests.post('https://www.textnow.com/api/users/' + self.username + '/messages',
+        response = scraper.post('https://www.textnow.com/api/users/' + self.username + '/messages',
                                  headers=self.headers, cookies=self.cookies, data=data)
 
         if response.status_code == 200:
