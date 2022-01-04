@@ -5,10 +5,12 @@ from urllib.parse import quote
 import mimetypes
 import json
 import requests
+import cloudscraper
 import time
 
 MESSAGE_TYPE = 0
 
+scraper = cloudscraper.create_scraper()
 
 class Message:
     def __init__(self, msg_obj, outer_self):
@@ -34,7 +36,7 @@ class Message:
         has_video = True if file_type == "video" else False
         msg_type = 2 if file_type == "image" else 4
 
-        file_url_holder_req = requests.get("https://www.textnow.com/api/v3/attachment_url?message_type=2",
+        file_url_holder_req = scraper.get("https://www.textnow.com/api/v3/attachment_url?message_type=2",
                                            cookies=self.self.cookies, headers=self.self.headers)
         if str(file_url_holder_req.status_code).startswith("2"):
             file_url_holder = json.loads(file_url_holder_req.text)["result"]
@@ -51,7 +53,7 @@ class Message:
                     "credentials": 'omit'
                 }
 
-                place_file_req = requests.put(file_url_holder, data=raw, headers=headers_place_file,
+                place_file_req = scraper.put(file_url_holder, data=raw, headers=headers_place_file,
                                               cookies=self.self.cookies)
                 if str(place_file_req.status_code).startswith("2"):
 
@@ -67,7 +69,7 @@ class Message:
                         "media_type": file_type
                     }
 
-                    send_file_req = requests.post("https://www.textnow.com/api/v3/send_attachment", data=json_data,
+                    send_file_req = scraper.post("https://www.textnow.com/api/v3/send_attachment", data=json_data,
                                                   headers=self.self.headers, cookies=self.self.cookies)
                     return send_file_req
                 else:
@@ -85,7 +87,7 @@ class Message:
                         + datetime.now().isoformat() + '"}'
             }
 
-        response = requests.post('https://www.textnow.com/api/users/' + self.self.username + '/messages',
+        response = scraper.post('https://www.textnow.com/api/users/' + self.self.username + '/messages',
                                  headers=self.self.headers, cookies=self.self.cookies, data=data)
         if not str(response.status_code).startswith("2"):
             self.self.request_handler(response.status_code)
@@ -106,7 +108,7 @@ class Message:
             "http_method": "PATCH"
         }
 
-        res = requests.post(url, params=params, data=data, cookies=self.self.cookies, headers=self.self.headers)
+        res = scraper.post(url, params=params, data=data, cookies=self.self.cookies, headers=self.self.headers)
         return res
 
     def wait_for_response(self, timeout_bool=True):
