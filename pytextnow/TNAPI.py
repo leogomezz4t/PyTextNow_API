@@ -92,6 +92,7 @@ class Client:
                         for msg in unread_msgs:
                             msg.mark_as_read()
                             func(msg)
+                time.sleep(1)
 
         atexit.register(on_exit)
 
@@ -140,11 +141,14 @@ class Client:
         """
         req = requests.get("https://www.textnow.com/api/users/" + self.username + "/messages", headers=self.headers,
                            cookies=self.cookies)
+        
         if str(req.status_code).startswith("2"):
             messages = json.loads(req.content)
             messages = [
                 Message(msg, self) if not msg["message"].startswith("http") else MultiMediaMessage(msg, self)
                 for msg in messages["messages"]]
+            
+            time.sleep(1)
             return MessageContainer(messages, self)
         else:
             self.request_handler(req.status_code)
@@ -160,6 +164,8 @@ class Client:
             return messages["messages"]
         else:
             self.request_handler(req.status_code)
+            
+        time.sleep(1)
 
     def get_sent_messages(self):
         """
@@ -167,7 +173,7 @@ class Client:
         """
         sent_messages = self.get_messages()
         sent_messages = [msg for msg in sent_messages if msg.direction == SENT_MESSAGE_TYPE]
-
+        time.sleep(1)
         return MessageContainer(sent_messages, self)
 
     def get_received_messages(self):
@@ -176,7 +182,7 @@ class Client:
         """
         messages = self.get_messages()
         messages = [msg for msg in messages if msg.direction == RECEIVED_MESSAGE_TYPE]
-
+        time.sleep(1)
         return MessageContainer(messages, self)
 
     def get_unread_messages(self):
@@ -185,7 +191,7 @@ class Client:
         """
         new_messages = self.get_received_messages()
         new_messages = [msg for msg in new_messages if not msg.read]
-
+        time.sleep(1)
         return MessageContainer(new_messages, self)
 
     def get_read_messages(self):
@@ -194,7 +200,7 @@ class Client:
         """
         new_messages = self.get_received_messages()
         new_messages = [msg for msg in new_messages if msg.read]
-
+        time.sleep(1)
         return MessageContainer(new_messages, self)
 
     def send_mms(self, to, file):
@@ -241,6 +247,8 @@ class Client:
 
                     send_file_req = requests.post("https://www.textnow.com/api/v3/send_attachment", data=json_data,
                                                   headers=self.headers, cookies=self.cookies)
+                    
+                    time.sleep(1)
                     return send_file_req
                 else:
                     self.request_handler(place_file_req.status_code)
@@ -270,6 +278,8 @@ class Client:
 
         if not str(response.status_code).startswith("2"):
             self.request_handler(response.status_code)
+            
+        time.sleep(1)
         return response
 
     def wait_for_response(self, number, timeout_bool=True):

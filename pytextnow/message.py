@@ -69,6 +69,7 @@ class Message:
 
                     send_file_req = requests.post("https://www.textnow.com/api/v3/send_attachment", data=json_data,
                                                   headers=self.self.headers, cookies=self.self.cookies)
+                    time.sleep(1)
                     return send_file_req
                 else:
                     raise self.self.FailedRequest(str(place_file_req.status_code))
@@ -89,6 +90,7 @@ class Message:
                                  headers=self.self.headers, cookies=self.self.cookies, data=data)
         if not str(response.status_code).startswith("2"):
             self.self.request_handler(response.status_code)
+        time.sleep(1)
         return response
 
     def mark_as_read(self):
@@ -107,6 +109,7 @@ class Message:
         }
 
         res = requests.post(url, params=params, data=data, cookies=self.self.cookies, headers=self.self.headers)
+        time.sleep(1)
         return res
 
     def wait_for_response(self, timeout_bool=True):
