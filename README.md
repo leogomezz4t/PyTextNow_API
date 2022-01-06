@@ -146,6 +146,12 @@ def handler(msg):
 
 ## Patch Notes
 
+### 1.2.0
+- Bug fixes
+- Added pauses after requests
+- Fixed newline bug
+- Fixed login bug
+
 ### 1.1.9
 - Updated MANIFEST
 

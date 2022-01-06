@@ -19,7 +19,7 @@ def dependencies():
 
 setuptools.setup(
     name="PyTextNow",
-    version="1.1.9",
+    version="1.2.0",
     author="Leo Wu-Gomez",
     author_email="leojwu18@gmail.com",
     description="Texting python package which utilizes TextNow.",
