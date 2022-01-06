@@ -814,3 +814,5 @@ $RECYCLE.BIN/
 .history/
 
 /.idea/
+
+./pytextnow/user_cookies.json
