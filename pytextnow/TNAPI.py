@@ -15,6 +15,7 @@ import json
 from os.path import realpath, dirname, join
 import time
 import atexit
+import re
 
 MESSAGE_TYPE = 0
 MULTIMEDIA_MESSAGE_TYPE = 1
@@ -97,6 +98,9 @@ class Client:
         atexit.register(on_exit)
 
     # Functions
+    def _replace_newlines(self, text):
+        return re.sub(r'(?<!\\)\n', r'\\n', text)
+
     def get_initial_csrf_token(self):
         req = requests.get('https://www.textnow.com/messaging', cookies=self.cookies)
 
@@ -259,6 +263,8 @@ class Client:
         """
             Sends an sms text message to this number
         """
+        text = self._replace_newlines(text)
+        
         data = \
             {
                 'json': '{"contact_value":"' + to + '","contact_type":2,"message":"' + text + '","read":1,'
