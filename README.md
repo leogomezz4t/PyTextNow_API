@@ -9,7 +9,7 @@
 ## Installation
 #### Method One: ***Using git clone***
 ```bash
-git clone https://github.com/leogomezz4t/PyTextNow_API
+git clone https://github.com/WuGomezCode/TextNow-API.git
 ```
 #### Method Two: ***Using pip***
 ```bash
@@ -92,30 +92,18 @@ for message in new_messages:
 ```
 ### How to get all messages
 ```python
-messages = client.get_messages() -> Container list
+messages = client.get_messages() -> MessageContainer list
 # Same as above
 ```
 ### How to get all sent messages
 ```python 
-sent_messages = client.get_sent_messages() -> Container list
+sent_messages = client.get_sent_messages() -> MessageContainer list
 #Same as above
 ```
 
 ### How to filter messages
 ```python
 filtered = client.get_messages().get(number="number")
-```
-
-### How to get contacts
-```python
-contacts = client.get_contacts()
-print(contacts[0].number)
-print(contacts[0].name)
-```
-
-### How to filter contacts
-```python
-filtered = contacts.get(name="Alice")
 ```
 
 ### How to synchronously block until a response
@@ -176,15 +164,6 @@ while 1:
 
 
 ## Patch Notes
-
-### 2.0.0
-- Refactoring files/cleaning up
-- Making user sid private.
-- Refreshing allowing a user to keep their sid available for a longer period of time.
-- Added `Contact` class
-- Added `Container` class
-- can use `get_contacts()` from the `Client` instance
-- Using database instead of file
 
 ### 1.1.7
 - Added get_username.mp4 video
