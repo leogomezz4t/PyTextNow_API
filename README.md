@@ -1,6 +1,8 @@
 # TextNow API
 ### TNAPI is a python module that uses [TextNow](https://www.textnow.com/) to enable free programmable texting 
 
+# THIS PROJECT IS NO LONGER BEING MAINTAINED
+
 ## Credit
 - Developer: Leonardo Wu-Gomez
 - Reddit: [leogomezz4t](https://www.reddit.com/user/leogomezz4t)
@@ -145,6 +147,10 @@ def handler(msg):
 
 
 ## Patch Notes
+
+### 1.2.1
+- Fixed MultiMediaMessage causing error
+- Removed user_cookies.json
 
 ### 1.2.0
 - Bug fixes

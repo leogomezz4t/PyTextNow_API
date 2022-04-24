@@ -29,59 +29,22 @@ scraper = cloudscraper.create_scraper()
 
 class Client:
     def __init__(self, username: str = None, sid_cookie=None, csrf_cookie=None):
-        # Load SIDS
-        self._user_cookies = {}
-        self._good_parse = False
-        self._user_cookies_file = join(dirname(realpath(__file__)), 'user_cookies.json')
-
-        try:
-            with open(self._user_cookies_file, 'r') as file:
-                self._user_cookies = json.loads(file.read())
-                self._good_parse = True
-        except json.decoder.JSONDecodeError:
-            with open(self._user_cookies_file, 'w') as file:
-                file.write('{}')
-
         self.username = username
         self.allowed_events = ["message"]
 
         self.events = []
         self.cookies = {}
-
-        if self.username in self._user_cookies.keys():
-            sid = sid_cookie if sid_cookie else self._user_cookies[self.username]['sid']
-            csrf = csrf_cookie if csrf_cookie else self._user_cookies[self.username]['csrf']
-            self.cookies = {
-                'connect.sid': sid,
-                '_csrf': csrf,
-            }
-            self._user_cookies[self.username] = {
-                'sid': sid,
-                'csrf': csrf,
-            }
-            if sid_cookie and csrf_cookie and not self._good_parse:
-                with open(self._user_cookies_file, "w") as file:
-                    file.write(json.dumps(self._user_cookies))
-        else:
-            sid,csrf = (sid_cookie,csrf_cookie) if sid_cookie and csrf_cookie else login()
-            self.cookies = {
-                'connect.sid': sid,
-                '_csrf': csrf,
-            }
-            self._user_cookies[self.username] = {
-                'sid': sid,
-                'csrf': csrf,
-            }
-            with open(self._user_cookies_file, "w") as file:
-                file.write(json.dumps(self._user_cookies))
-
+        
+        sid,csrf = (sid_cookie,csrf_cookie) if sid_cookie and csrf_cookie else login()
+        self.cookies = {
+            'connect.sid': sid,
+            '_csrf': csrf,
+        }
         self.headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/88.0.4324.104 Safari/537.36 ',
             'x-csrf-token': self.get_initial_csrf_token()
         }
-
-        file.close()
 
         def on_exit():
             if len(self.events) == 0:
@@ -118,27 +81,11 @@ class Client:
             raise FailedRequest(req.status_code)
 
     def auth_reset(self, sid_cookie=None, csrf_cookie=None):
-        with open(self._user_cookies_file, "r") as user_cookie_file:
-            user_cookies = json.loads(user_cookie_file.read())
-
-        if self.username in user_cookies.keys():
-            del user_cookies[self.username]
-
-            with open(self._user_cookies_file, "w") as user_cookies_file:
-                user_cookies_file.write(json.dumps(user_cookies))
-
-            self.__init__(self.username, sid_cookie=sid_cookie, csrf_cookie=csrf_cookie)
-        else:
-            if sid_cookie and csrf_cookie:
-                user_cookies[self.username] = {
-                    "sid": sid_cookie,
-                    "csrf": csrf_cookie
-                    }
-                with open(self._user_cookies_file, "w") as user_cookies_file:
-                    user_cookies_file.write(json.dumps(user_cookies))
-                self.__init__(self.username)
-            else:
-                raise AuthError("You haven't authenticated before.")
+        sid,csrf = (sid_cookie,csrf_cookie) if sid_cookie and csrf_cookie else login()
+        self.cookies = {
+            'connect.sid': sid,
+            '_csrf': csrf,
+        }
 
     def get_messages(self):
         """
