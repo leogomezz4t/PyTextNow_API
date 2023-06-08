@@ -10,7 +10,7 @@
 ## Installation
 #### Method One: ***Using git clone***
 ```bash
-git clone https://github.com/WuGomezCode/TextNow-API.git
+git clone https://github.com/WuGomezCode/PyTextNow_API.git
 ```
 #### Method Two: ***Using pip***
 ```bash
